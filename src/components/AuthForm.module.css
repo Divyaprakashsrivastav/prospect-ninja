@@ -1,0 +1,36 @@
+.page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.card {
+  width: min(420px, 100%);
+}
+
+.title {
+  margin-bottom: 6px;
+}
+
+.sub {
+  color: var(--muted);
+  margin-bottom: 20px;
+}
+
+.error {
+  color: var(--danger);
+  margin-bottom: 12px;
+  font-size: 14px;
+}
+
+.footer {
+  margin-top: 16px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.footer a {
+  color: var(--brand);
+  font-weight: 600;
+}

@@ -1,0 +1,123 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  campaigns   Campaign[]
+  connections IntegrationConnection[]
+  auditEvents MessageAuditEvent[]
+}
+
+model Campaign {
+  id                 String   @id @default(cuid())
+  userId             String
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name               String
+  icp                Json
+  isActive           Boolean  @default(true)
+  dailyDiscoverLimit Int      @default(15)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  prospects     Prospect[]
+  discoveryRuns DiscoveryRun[]
+  messages      OutreachMessage[]
+
+  @@index([userId])
+}
+
+model IntegrationConnection {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider  String
+  status    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, provider])
+}
+
+model Prospect {
+  id           String   @id @default(cuid())
+  userId       String
+  campaignId   String
+  campaign     Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  provider     String
+  externalId   String
+  linkedinUrl  String
+  fullName     String
+  headline     String?
+  companyName  String?
+  location     String?
+  industry     String?
+  rawProfile   Json
+  discoveredAt DateTime @default(now())
+
+  messages OutreachMessage[]
+
+  @@unique([userId, linkedinUrl])
+  @@unique([userId, provider, externalId])
+  @@index([campaignId])
+  @@index([userId])
+}
+
+model DiscoveryRun {
+  id              String   @id @default(cuid())
+  campaignId      String
+  campaign        Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  runDate         DateTime @db.Date
+  discoveredCount Int      @default(0)
+  status          String   @default("running")
+  errorMessage    String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([campaignId, runDate])
+}
+
+model OutreachMessage {
+  id               String    @id @default(cuid())
+  prospectId       String    @unique
+  prospect         Prospect  @relation(fields: [prospectId], references: [id], onDelete: Cascade)
+  campaignId       String
+  campaign         Campaign  @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  status           String
+  body             String
+  approvedAt       DateTime?
+  approvedBodyHash String?
+  sentAt           DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  auditEvents MessageAuditEvent[]
+
+  @@index([campaignId])
+  @@index([status])
+}
+
+model MessageAuditEvent {
+  id           String   @id @default(cuid())
+  messageId    String
+  message      OutreachMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  actorUserId  String
+  actor        User     @relation(fields: [actorUserId], references: [id])
+  action       String
+  bodySnapshot String
+  metadata     Json?
+  createdAt    DateTime @default(now())
+
+  @@index([messageId])
+}

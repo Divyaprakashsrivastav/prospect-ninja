@@ -1,0 +1,14 @@
+.wrap {
+  text-align: center;
+  padding: 36px 16px;
+  color: var(--muted);
+}
+
+.title {
+  color: var(--text);
+  margin-bottom: 8px;
+}
+
+.action {
+  margin-top: 16px;
+}

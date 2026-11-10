@@ -1,0 +1,30 @@
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.label {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.input,
+.textarea {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: white;
+}
+
+.textarea {
+  min-height: 140px;
+  resize: vertical;
+}
+
+.hint {
+  color: var(--muted);
+  font-size: 12px;
+}

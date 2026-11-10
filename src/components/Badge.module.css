@@ -1,0 +1,36 @@
+.badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: capitalize;
+}
+
+.pending_review,
+.draft {
+  background: #eff6ff;
+  color: var(--info);
+}
+
+.approved {
+  background: #ecfdf5;
+  color: var(--success);
+}
+
+.rejected,
+.failed {
+  background: #fef2f2;
+  color: var(--danger);
+}
+
+.demo_recorded {
+  background: #fffbeb;
+  color: var(--warn);
+}
+
+.sent {
+  background: #ecfdf5;
+  color: var(--success);
+}
