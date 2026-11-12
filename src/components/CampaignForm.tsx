@@ -2,9 +2,16 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { Banner } from "@/components/Banner";
 import { Button } from "@/components/Button";
-import { Field, TextInput } from "@/components/Field";
-import type { Icp } from "@/modules/campaigns/schema";
+import { Field, Select, TextArea, TextInput } from "@/components/Field";
+import styles from "./CampaignForm.module.css";
+import {
+  COMPANY_SIZES,
+  DAILY_PROSPECT_LIMIT,
+  MESSAGE_TONES,
+  type Icp,
+} from "@/modules/campaigns/schema";
 
 function joinList(values: string[]): string {
   return values.join(", ");
@@ -24,6 +31,7 @@ export function CampaignForm({
   campaignId?: string;
   initial?: {
     name: string;
+    description: string;
     isActive: boolean;
     dailyDiscoverLimit: number;
     icp: Icp;
@@ -31,28 +39,29 @@ export function CampaignForm({
 }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const icp = initial?.icp;
 
   async function onSubmit(formData: FormData) {
     setPending(true);
     setError(null);
+    setSuccess(null);
     const payload = {
       name: String(formData.get("name") ?? ""),
+      description: String(formData.get("description") ?? ""),
       isActive: formData.get("isActive") === "on",
-      dailyDiscoverLimit: Number(formData.get("dailyDiscoverLimit") ?? 15),
+      dailyDiscoverLimit: DAILY_PROSPECT_LIMIT,
       icp: {
         jobTitles: splitList(String(formData.get("jobTitles") ?? "")),
         industries: splitList(String(formData.get("industries") ?? "")),
         locations: splitList(String(formData.get("locations") ?? "")),
         keywords: splitList(String(formData.get("keywords") ?? "")),
         exclusions: splitList(String(formData.get("exclusions") ?? "")),
-        companySizeMin: formData.get("companySizeMin")
-          ? Number(formData.get("companySizeMin"))
-          : undefined,
-        companySizeMax: formData.get("companySizeMax")
-          ? Number(formData.get("companySizeMax"))
-          : undefined,
+        companySize: String(formData.get("companySize") ?? ""),
+        productService: String(formData.get("productService") ?? ""),
+        outreachObjective: String(formData.get("outreachObjective") ?? ""),
+        tone: String(formData.get("tone") ?? "professional"),
       },
     };
     const response = await fetch(
@@ -72,82 +81,137 @@ export function CampaignForm({
       setError(data.error ?? "Could not save campaign.");
       return;
     }
-    router.push(campaignId ? `/targeting/${campaignId}` : "/targeting");
+    setSuccess(
+      campaignId ? "Campaign updated." : "Campaign created. Daily limit is 15 prospects.",
+    );
+    router.push(
+      campaignId ? "/targeting?updated=1" : "/targeting?created=1",
+    );
     router.refresh();
   }
 
   return (
     <form action={onSubmit}>
-      {error ? (
-        <p style={{ color: "var(--danger)", marginBottom: 12 }}>{error}</p>
-      ) : null}
-      <Field label="Campaign name">
-        <TextInput name="name" required defaultValue={initial?.name} />
-      </Field>
-      <Field
-        label="Job titles"
-        hint="Comma-separated. Used to match demo sample data."
-      >
-        <TextInput
-          name="jobTitles"
-          defaultValue={joinList(icp?.jobTitles ?? [])}
-          placeholder="VP of Sales, Head of Revenue Operations"
-        />
-      </Field>
-      <Field label="Industries">
-        <TextInput
-          name="industries"
-          defaultValue={joinList(icp?.industries ?? [])}
-          placeholder="SaaS, Healthcare"
-        />
-      </Field>
-      <Field label="Locations">
-        <TextInput
-          name="locations"
-          defaultValue={joinList(icp?.locations ?? [])}
-        />
-      </Field>
-      <Field label="Keywords">
-        <TextInput
-          name="keywords"
-          defaultValue={joinList(icp?.keywords ?? [])}
-        />
-      </Field>
-      <Field label="Exclusions">
-        <TextInput
-          name="exclusions"
-          defaultValue={joinList(icp?.exclusions ?? [])}
-        />
-      </Field>
-      <Field label="Company size min">
-        <TextInput
-          name="companySizeMin"
-          type="number"
-          min={1}
-          defaultValue={icp?.companySizeMin}
-        />
-      </Field>
-      <Field label="Company size max">
-        <TextInput
-          name="companySizeMax"
-          type="number"
-          min={1}
-          defaultValue={icp?.companySizeMax}
-        />
-      </Field>
-      <Field
-        label="Daily discover limit"
-        hint="Hard cap is 15 new prospects per campaign per day."
-      >
-        <TextInput
-          name="dailyDiscoverLimit"
-          type="number"
-          min={1}
-          max={15}
-          defaultValue={initial?.dailyDiscoverLimit ?? 15}
-          required
-        />
-      </Field>
+      {error ? <Banner tone="error">{error}</Banner> : null}
+      {success ? <Banner>{success}</Banner> : null}
+      <p className={styles.limitNote}>
+        Each campaign discovers at most {DAILY_PROSPECT_LIMIT} new prospects per
+        day. This limit cannot be increased.
+      </p>
+      <div className={styles.grid}>
+        <div className={styles.wide}>
+          <Field label="Campaign name">
+            <TextInput
+              name="name"
+              required
+              minLength={2}
+              defaultValue={initial?.name}
+              placeholder="APAC SaaS founders"
+            />
+          </Field>
+        </div>
+        <div className={styles.wide}>
+          <Field
+            label="Campaign description"
+            hint="What this campaign is trying to achieve."
+          >
+            <TextArea
+              name="description"
+              required
+              minLength={10}
+              defaultValue={initial?.description}
+              placeholder="Find operations leaders at mid-market SaaS companies who may need outreach help."
+            />
+          </Field>
+        </div>
+        <Field
+          label="Target job titles"
+          hint="Comma-separated. Examples: CEO, Founder, CTO, Marketing Director"
+        >
+          <TextInput
+            name="jobTitles"
+            required
+            defaultValue={joinList(icp?.jobTitles ?? [])}
+            placeholder="CEO, Founder, CTO"
+          />
+        </Field>
+        <Field
+          label="Target industries"
+          hint="Examples: SaaS, IT Services, FinTech, Healthcare"
+        >
+          <TextInput
+            name="industries"
+            required
+            defaultValue={joinList(icp?.industries ?? [])}
+            placeholder="SaaS, FinTech"
+          />
+        </Field>
+        <Field
+          label="Target locations"
+          hint="Examples: Australia, United States, United Kingdom"
+        >
+          <TextInput
+            name="locations"
+            required
+            defaultValue={joinList(icp?.locations ?? [])}
+            placeholder="Australia, United States"
+          />
+        </Field>
+        <Field label="Company size">
+          <Select
+            name="companySize"
+            required
+            defaultValue={icp?.companySize ?? ""}
+          >
+            <option value="" disabled>
+              Select a range
+            </option>
+            {COMPANY_SIZES.map((size) => (
+              <option key={size.id} value={size.id}>
+                {size.label}
+              </option>
+            ))}
+          </Select>
+        </Field>
+        <div className={styles.wide}>
+          <Field label="Keywords" hint="Optional extra matching terms.">
+            <TextInput
+              name="keywords"
+              defaultValue={joinList(icp?.keywords ?? [])}
+              placeholder="revenue operations, outbound"
+            />
+          </Field>
+        </div>
+        <div className={styles.wide}>
+          <Field label="Product or service description">
+            <TextArea
+              name="productService"
+              required
+              minLength={10}
+              defaultValue={icp?.productService}
+              placeholder="Human-approved LinkedIn outreach for B2B teams."
+            />
+          </Field>
+        </div>
+        <Field label="Outreach objective">
+          <TextInput
+            name="outreachObjective"
+            required
+            minLength={5}
+            defaultValue={icp?.outreachObjective}
+            placeholder="Book a 15-minute intro call"
+          />
+        </Field>
+        <Field label="Preferred message tone">
+          <Select name="tone" defaultValue={icp?.tone ?? "professional"}>
+            {MESSAGE_TONES.map((tone) => (
+              <option key={tone} value={tone}>
+                {tone[0].toUpperCase() + tone.slice(1)}
+              </option>
+            ))}
+          </Select>
+        </Field>
+      </div>
       <label style={{ display: "flex", gap: 8, marginBottom: 16 }}>
         <input
           type="checkbox"
@@ -156,9 +220,15 @@ export function CampaignForm({
         />
         Campaign is active
       </label>
-      <Button type="submit" disabled={pending}>
-        {pending ? "Saving…" : "Save campaign"}
-      </Button>
+      <div className={styles.actions}>
+        <Button type="submit" disabled={pending}>
+          {pending
+            ? "Saving…"
+            : campaignId
+              ? "Save changes"
+              : "Create campaign"}
+        </Button>
+      </div>
     </form>
   );
 }

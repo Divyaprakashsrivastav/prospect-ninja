@@ -22,17 +22,19 @@ copy .env.example .env.local
 
 2. Set `AUTH_SECRET` and `CRON_SECRET` to long random strings. Set `DATABASE_URL` to PostgreSQL.
 
-3. Start Postgres (Docker):
+3. Start PostgreSQL. This machine does not have Docker or a system Postgres install, so use the bundled local cluster:
 
 ```bash
-docker compose up -d
+npm run db:up
 ```
 
-4. Install, migrate, run:
+Leave that terminal open. Alternatively, `docker compose up -d` if Docker Desktop is available.
+
+4. In a second terminal, migrate and run the app:
 
 ```bash
 npm install
-npx prisma migrate deploy
+npm run db:deploy
 npm run dev
 ```
 

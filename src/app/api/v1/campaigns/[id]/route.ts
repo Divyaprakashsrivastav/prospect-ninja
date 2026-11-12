@@ -1,10 +1,14 @@
 import { NextResponse } from "next/server";
 import { fromUnknownError, jsonError } from "@/lib/http";
 import { getApiUser } from "@/lib/session";
-import { campaignInputSchema } from "@/modules/campaigns/schema";
+import {
+  campaignInputSchema,
+  campaignStatusSchema,
+} from "@/modules/campaigns/schema";
 import {
   deleteCampaign,
   getCampaign,
+  setCampaignActive,
   updateCampaign,
 } from "@/modules/campaigns/service";
 
@@ -32,6 +36,21 @@ export async function PUT(request: Request, { params }: Params) {
     const { id } = await params;
     const body = campaignInputSchema.parse(await request.json());
     const campaign = await updateCampaign(user.id, id, body);
+    return NextResponse.json({ campaign });
+  } catch (error) {
+    return fromUnknownError(error);
+  }
+}
+
+export async function PATCH(request: Request, { params }: Params) {
+  const user = await getApiUser();
+  if (!user) {
+    return jsonError("Unauthorized.", 401);
+  }
+  try {
+    const { id } = await params;
+    const body = campaignStatusSchema.parse(await request.json());
+    const campaign = await setCampaignActive(user.id, id, body.isActive);
     return NextResponse.json({ campaign });
   } catch (error) {
     return fromUnknownError(error);

@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { Badge } from "@/components/Badge";
 import { Card } from "@/components/Card";
 import { CampaignForm } from "@/components/CampaignForm";
 import { DiscoverButton } from "@/components/DiscoverButton";
@@ -23,14 +24,23 @@ export default async function CampaignDetailPage({
       <PageHeader
         kicker="Campaign"
         title={campaign.name}
-        description="Edit the ICP or pull today's sample prospects (capped at 15)."
-        actions={<DiscoverButton campaignId={campaign.id} />}
+        description={
+          campaign.description ||
+          "Edit the ICP or pull today's sample prospects (capped at 15)."
+        }
+        actions={
+          <>
+            <Badge status={campaign.isActive ? "active" : "paused"} />
+            <DiscoverButton campaignId={campaign.id} />
+          </>
+        }
       />
       <Card>
         <CampaignForm
           campaignId={campaign.id}
           initial={{
             name: campaign.name,
+            description: campaign.description,
             isActive: campaign.isActive,
             dailyDiscoverLimit: campaign.dailyDiscoverLimit,
             icp: campaign.icp,

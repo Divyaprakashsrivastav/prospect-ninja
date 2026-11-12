@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Badge } from "@/components/Badge";
 import { Banner } from "@/components/Banner";
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
@@ -26,8 +27,8 @@ export default async function DashboardPage() {
         title={`Welcome, ${user.name}`}
         description="Discover prospects, draft outreach, and send only after you approve."
         actions={
-          <Link href="/targeting">
-            <Button>Define ICP</Button>
+          <Link href="/targeting/new">
+            <Button>Create campaign</Button>
           </Link>
         }
       />
@@ -60,23 +61,52 @@ export default async function DashboardPage() {
             title="No campaigns yet"
             description="Create an Ideal Customer Profile to start daily discovery (max 15 new prospects per campaign per day)."
             action={
-              <Link href="/targeting">
+              <Link href="/targeting/new">
                 <Button>Create campaign</Button>
               </Link>
             }
           />
         ) : (
           <div>
-            <h2 style={{ marginBottom: 12 }}>Active campaigns</h2>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                gap: 12,
+                marginBottom: 12,
+                alignItems: "center",
+              }}
+            >
+              <h2>Your campaigns</h2>
+              <Link href="/targeting" style={{ color: "var(--brand)", fontWeight: 600 }}>
+                Manage all
+              </Link>
+            </div>
             {campaigns.map((campaign) => (
-              <p key={campaign.id} style={{ marginBottom: 8 }}>
-                <Link href={`/targeting/${campaign.id}`}>
-                  <strong>{campaign.name}</strong>
-                </Link>
-                {" · "}
-                {campaign._count.prospects} prospects
-                {campaign.isActive ? "" : " · paused"}
-              </p>
+              <div
+                key={campaign.id}
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  gap: 12,
+                  padding: "10px 0",
+                  borderTop: "1px solid var(--border)",
+                }}
+              >
+                <div>
+                  <Link href={`/targeting/${campaign.id}`}>
+                    <strong>{campaign.name}</strong>
+                  </Link>
+                  <div style={{ color: "var(--muted)", fontSize: 13 }}>
+                    {campaign.icp.jobTitles.slice(0, 3).join(", ") || "No titles"}
+                    {" · "}
+                    {campaign.prospectCount} prospects
+                    {" · "}
+                    {campaign.pendingApprovals} pending
+                  </div>
+                </div>
+                <Badge status={campaign.isActive ? "active" : "paused"} />
+              </div>
             ))}
           </div>
         )}

@@ -6,7 +6,7 @@ import styles from "./AppNav.module.css";
 
 const links = [
   { href: "/dashboard", label: "Dashboard" },
-  { href: "/targeting", label: "Targeting" },
+  { href: "/targeting", label: "Campaigns" },
   { href: "/prospects", label: "Prospects" },
   { href: "/approval", label: "Approval queue" },
   { href: "/history", label: "History" },

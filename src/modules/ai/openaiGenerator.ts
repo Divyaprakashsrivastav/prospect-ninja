@@ -21,6 +21,9 @@ export const openaiGenerator: MessageGenerator = {
       industry: context.industry ?? null,
       campaignName: context.campaignName,
       icpTitles: context.icpTitles,
+      productService: context.productService || null,
+      outreachObjective: context.outreachObjective || null,
+      tone: context.tone || "professional",
     });
 
     const completion = await client.chat.completions.create({
@@ -30,7 +33,7 @@ export const openaiGenerator: MessageGenerator = {
         {
           role: "system",
           content:
-            "Write a concise professional LinkedIn outreach message. Use only facts provided in JSON. Never invent personal details, metrics, mutual connections, or company news. If a field is null, omit it. Keep it under 90 words. No subject line.",
+            "Write a concise LinkedIn outreach message in the requested tone. Use only facts provided in JSON, including product/service and objective when present. Never invent personal details, metrics, mutual connections, or company news. If a field is null, omit it. Keep it under 90 words. No subject line.",
         },
         {
           role: "user",

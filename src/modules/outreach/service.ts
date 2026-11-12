@@ -52,6 +52,9 @@ export async function generateDraftForProspect(
     industry: prospect.industry,
     campaignName: prospect.campaign.name,
     icpTitles: icp.jobTitles,
+    productService: icp.productService,
+    outreachObjective: icp.outreachObjective,
+    tone: icp.tone,
   });
 
   const existing = prospect.messages[0];

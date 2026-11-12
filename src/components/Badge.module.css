@@ -30,7 +30,13 @@
   color: var(--warn);
 }
 
-.sent {
+.sent,
+.active {
   background: #ecfdf5;
   color: var(--success);
+}
+
+.paused {
+  background: #f1f5f9;
+  color: var(--muted);
 }

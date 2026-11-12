@@ -9,10 +9,12 @@
     "lint": "eslint",
     "postinstall": "prisma generate",
     "db:generate": "prisma generate",
-    "db:migrate": "prisma migrate dev",
-    "db:deploy": "prisma migrate deploy",
-    "db:push": "prisma db push",
-    "job:discover": "tsx src/jobs/runDiscover.ts"
+    "db:up": "node scripts/start-postgres.mjs",
+    "db:migrate": "node scripts/run-with-env.js npx prisma migrate dev",
+    "db:deploy": "node scripts/run-with-env.js npx prisma migrate deploy",
+    "db:push": "node scripts/run-with-env.js npx prisma db push",
+    "job:discover": "tsx src/jobs/runDiscover.ts",
+    "test:campaigns": "node scripts/run-with-env.js npx tsx scripts/test-campaigns.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",
@@ -30,6 +32,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "embedded-postgres": "^18.6.0-beta.19",
     "eslint": "^9",
     "eslint-config-next": "15.5.29",
     "prisma": "^6.19.3",

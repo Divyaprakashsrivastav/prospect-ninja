@@ -25,6 +25,7 @@ model Campaign {
   userId             String
   user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   name               String
+  description        String   @default("")
   icp                Json
   isActive           Boolean  @default(true)
   dailyDiscoverLimit Int      @default(15)

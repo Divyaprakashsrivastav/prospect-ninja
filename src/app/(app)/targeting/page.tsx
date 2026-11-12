@@ -1,50 +1,109 @@
 import Link from "next/link";
+import { Badge } from "@/components/Badge";
+import { Banner } from "@/components/Banner";
+import { Button } from "@/components/Button";
+import { CampaignActions } from "@/components/CampaignActions";
 import { Card } from "@/components/Card";
-import { CampaignForm } from "@/components/CampaignForm";
 import { EmptyState } from "@/components/EmptyState";
 import { PageHeader } from "@/components/PageHeader";
+import tableStyles from "@/components/CampaignTable.module.css";
+import { formatDateShort } from "@/lib/dates";
 import { requireUser } from "@/lib/session";
 import { listCampaigns } from "@/modules/campaigns/service";
 
-export default async function TargetingPage() {
+export default async function TargetingPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ created?: string; updated?: string }>;
+}) {
   const user = await requireUser();
+  const params = await searchParams;
   const campaigns = await listCampaigns(user.id);
 
   return (
     <>
       <PageHeader
         kicker="ICP"
-        title="Prospect targeting"
-        description="One Ideal Customer Profile per campaign. Discovery adds at most 15 new people per day."
+        title="Campaigns"
+        description="Each active campaign can discover up to 15 relevant prospects per day."
+        actions={
+          <Link href="/targeting/new">
+            <Button>New campaign</Button>
+          </Link>
+        }
       />
-      <div style={{ display: "grid", gap: 16, gridTemplateColumns: "1.1fr 0.9fr" }}>
-        <Card>
-          <h2 style={{ marginBottom: 12 }}>New campaign</h2>
-          <CampaignForm />
-        </Card>
-        <Card>
-          <h2 style={{ marginBottom: 12 }}>Your campaigns</h2>
-          {campaigns.length === 0 ? (
-            <EmptyState
-              title="Nothing here yet"
-              description="Save an ICP on the left to start targeting."
-            />
-          ) : (
-            campaigns.map((campaign) => (
-              <p key={campaign.id} style={{ marginBottom: 10 }}>
-                <Link href={`/targeting/${campaign.id}`}>
-                  <strong>{campaign.name}</strong>
-                </Link>
-                <br />
-                <span style={{ color: "var(--muted)", fontSize: 14 }}>
-                  {campaign._count.prospects} prospects · limit{" "}
-                  {campaign.dailyDiscoverLimit}/day
-                </span>
-              </p>
-            ))
-          )}
-        </Card>
-      </div>
+      {params.created ? (
+        <Banner>Campaign created. It now appears on your dashboard.</Banner>
+      ) : null}
+      {params.updated ? <Banner>Campaign changes saved.</Banner> : null}
+      <Card>
+        {campaigns.length === 0 ? (
+          <EmptyState
+            title="No campaigns yet"
+            description="Create an Ideal Customer Profile to start discovering 15 prospects per day."
+            action={
+              <Link href="/targeting/new">
+                <Button>Create campaign</Button>
+              </Link>
+            }
+          />
+        ) : (
+          <div className={tableStyles.wrap}>
+            <table className={tableStyles.table}>
+              <thead>
+                <tr>
+                  <th>Campaign</th>
+                  <th>Job titles</th>
+                  <th>Locations</th>
+                  <th>Industry</th>
+                  <th>Status</th>
+                  <th>Prospects</th>
+                  <th>Pending</th>
+                  <th>Created</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {campaigns.map((campaign) => (
+                  <tr key={campaign.id}>
+                    <td>
+                      <Link href={`/targeting/${campaign.id}`}>
+                        <strong>{campaign.name}</strong>
+                      </Link>
+                      {campaign.description ? (
+                        <div className={tableStyles.muted}>
+                          {campaign.description.slice(0, 80)}
+                          {campaign.description.length > 80 ? "…" : ""}
+                        </div>
+                      ) : null}
+                    </td>
+                    <td>{campaign.icp.jobTitles.join(", ") || "—"}</td>
+                    <td>{campaign.icp.locations.join(", ") || "—"}</td>
+                    <td>{campaign.icp.industries.join(", ") || "—"}</td>
+                    <td>
+                      <Badge status={campaign.isActive ? "active" : "paused"} />
+                    </td>
+                    <td>{campaign.prospectCount}</td>
+                    <td>{campaign.pendingApprovals}</td>
+                    <td>{formatDateShort(campaign.createdAt)}</td>
+                    <td>
+                      <div className={tableStyles.actions}>
+                        <Link href={`/targeting/${campaign.id}`}>
+                          <Button variant="secondary">Edit</Button>
+                        </Link>
+                        <CampaignActions
+                          campaignId={campaign.id}
+                          isActive={campaign.isActive}
+                        />
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Card>
     </>
   );
 }

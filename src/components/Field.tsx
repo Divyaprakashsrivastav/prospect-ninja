@@ -1,4 +1,8 @@
-import type { InputHTMLAttributes, TextareaHTMLAttributes } from "react";
+import type {
+  InputHTMLAttributes,
+  SelectHTMLAttributes,
+  TextareaHTMLAttributes,
+} from "react";
 import styles from "./Field.module.css";
 
 export function Field({
@@ -25,4 +29,8 @@ export function TextInput(props: InputHTMLAttributes<HTMLInputElement>) {
 
 export function TextArea(props: TextareaHTMLAttributes<HTMLTextAreaElement>) {
   return <textarea className={styles.textarea} {...props} />;
+}
+
+export function Select(props: SelectHTMLAttributes<HTMLSelectElement>) {
+  return <select className={styles.input} {...props} />;
 }

@@ -7,6 +7,9 @@ export type DraftContext = {
   industry?: string | null;
   campaignName: string;
   icpTitles: string[];
+  productService?: string;
+  outreachObjective?: string;
+  tone?: string;
 };
 
 export interface MessageGenerator {

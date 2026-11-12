@@ -16,7 +16,11 @@ export const fallbackGenerator: MessageGenerator = {
     lines.push(
       `I'm ${context.senderName}. I'm reaching out because your profile${headline ? ` as ${headline}` : ""}${company ? ` at ${company}` : ""} looks relevant to ${context.campaignName}.`,
     );
-    if (industry) {
+    const product = context.productService?.trim();
+    const objective = context.outreachObjective?.trim();
+    if (product) {
+      lines.push(`We help teams with ${product}.`);
+    } else if (industry) {
       lines.push(
         `I work with teams in ${industry} and would like to learn whether a short conversation would be useful.`,
       );
@@ -24,6 +28,9 @@ export const fallbackGenerator: MessageGenerator = {
       lines.push(
         "I'd like to learn whether a short conversation would be useful — no fabricated claims, just a genuine intro.",
       );
+    }
+    if (objective) {
+      lines.push(`The goal of this note is ${objective}.`);
     }
     lines.push("", "Best,", context.senderName);
 
