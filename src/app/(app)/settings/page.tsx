@@ -18,7 +18,10 @@ export default async function SettingsPage() {
         description="API keys stay on the server. This app never collects LinkedIn passwords."
       />
       <Banner>
-        OpenAI is {env.openaiApiKey ? "configured" : "not configured — template drafts are used"}.
+        OpenAI is{" "}
+        {env.openaiApiKey
+          ? `configured (${env.openaiModel}).`
+          : "not configured — DEMO OUTPUT templates are used. An external AI model is not called."}{" "}
         HeyReach is {env.heyreachApiKey ? "configured" : "not configured"}.
       </Banner>
       <Card>

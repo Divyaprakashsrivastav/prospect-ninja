@@ -75,7 +75,18 @@ export function MessageReview({
           type="button"
           variant="secondary"
           disabled={locked || pending}
-          onClick={() => call(`/api/v1/messages/${id}/generate`)}
+          onClick={() => {
+            if (
+              !window.confirm(
+                "Replace the existing draft? Edited or approved drafts cannot be overwritten.",
+              )
+            ) {
+              return;
+            }
+            void call(`/api/v1/messages/${id}/generate`, "POST", {
+              replaceExisting: true,
+            });
+          }}
         >
           Regenerate
         </Button>

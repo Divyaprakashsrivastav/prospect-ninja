@@ -61,6 +61,7 @@ export function CampaignForm({
         companySize: String(formData.get("companySize") ?? ""),
         productService: String(formData.get("productService") ?? ""),
         outreachObjective: String(formData.get("outreachObjective") ?? ""),
+        senderName: String(formData.get("senderName") ?? "").trim() || undefined,
         tone: String(formData.get("tone") ?? "professional"),
       },
     };
@@ -183,7 +184,10 @@ export function CampaignForm({
           </Field>
         </div>
         <div className={styles.wide}>
-          <Field label="Product or service description">
+          <Field
+            label="Product or service description"
+            hint="Used in outreach. Do not use placeholder or test copy."
+          >
             <TextArea
               name="productService"
               required
@@ -193,6 +197,16 @@ export function CampaignForm({
             />
           </Field>
         </div>
+        <Field
+          label="Sender name"
+          hint="Optional. Shown in generated outreach. Account name is never used."
+        >
+          <TextInput
+            name="senderName"
+            defaultValue={icp?.senderName ?? ""}
+            placeholder="Campaign sender"
+          />
+        </Field>
         <Field label="Outreach objective">
           <TextInput
             name="outreachObjective"

@@ -14,7 +14,9 @@
     "db:deploy": "node scripts/run-with-env.js npx prisma migrate deploy",
     "db:push": "node scripts/run-with-env.js npx prisma db push",
     "job:discover": "tsx src/jobs/runDiscover.ts",
-    "test:campaigns": "node scripts/run-with-env.js npx tsx scripts/test-campaigns.ts"
+    "test:campaigns": "node scripts/run-with-env.js npx tsx scripts/test-campaigns.ts",
+    "test:discovery": "node scripts/run-with-env.js npx tsx scripts/test-discovery.ts",
+    "test:messages": "node scripts/run-with-env.js npx tsx scripts/test-messages.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",

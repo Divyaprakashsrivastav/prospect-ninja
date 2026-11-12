@@ -48,6 +48,7 @@ export const icpSchema = z.object({
   exclusions: stringList,
   productService: z.string().trim().max(2000).default(""),
   outreachObjective: z.string().trim().max(500).default(""),
+  senderName: z.string().trim().max(80).optional(),
   tone: toneSchema.default("professional"),
 });
 
@@ -82,6 +83,7 @@ export const campaignInputSchema = z.object({
       .trim()
       .min(5, "Describe the outreach objective.")
       .max(500),
+    senderName: z.string().trim().max(80).optional(),
     tone: toneSchema,
   }),
 });

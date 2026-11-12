@@ -9,7 +9,15 @@ export async function GET(request: Request) {
     return jsonError("Unauthorized.", 401);
   }
   const { searchParams } = new URL(request.url);
-  const campaignId = searchParams.get("campaignId") ?? undefined;
-  const prospects = await listProspects(user.id, campaignId);
-  return NextResponse.json({ prospects });
+  const result = await listProspects(user.id, {
+    campaignId: searchParams.get("campaignId") ?? undefined,
+    q: searchParams.get("q") ?? undefined,
+    jobTitle: searchParams.get("jobTitle") ?? undefined,
+    industry: searchParams.get("industry") ?? undefined,
+    location: searchParams.get("location") ?? undefined,
+    page: searchParams.get("page")
+      ? Number(searchParams.get("page"))
+      : undefined,
+  });
+  return NextResponse.json(result);
 }

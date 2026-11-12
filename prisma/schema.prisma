@@ -60,10 +60,18 @@ model Prospect {
   externalId   String
   linkedinUrl  String
   fullName     String
+  firstName    String   @default("")
+  lastName     String   @default("")
   headline     String?
+  jobTitle     String?
   companyName  String?
+  companySize  String?
   location     String?
   industry     String?
+  summary      String?
+  matchScore   Int      @default(0)
+  matchReasons Json
+  isDemo       Boolean  @default(true)
   rawProfile   Json
   discoveredAt DateTime @default(now())
 
@@ -90,18 +98,25 @@ model DiscoveryRun {
 }
 
 model OutreachMessage {
-  id               String    @id @default(cuid())
-  prospectId       String    @unique
-  prospect         Prospect  @relation(fields: [prospectId], references: [id], onDelete: Cascade)
-  campaignId       String
-  campaign         Campaign  @relation(fields: [campaignId], references: [id], onDelete: Cascade)
-  status           String
-  body             String
-  approvedAt       DateTime?
-  approvedBodyHash String?
-  sentAt           DateTime?
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  id                       String    @id @default(cuid())
+  prospectId               String    @unique
+  prospect                 Prospect  @relation(fields: [prospectId], references: [id], onDelete: Cascade)
+  campaignId               String
+  campaign                 Campaign  @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  status                   String
+  body                     String
+  originalBody             String?
+  personalizationReason    String?
+  personalizationEvidence  Json?
+  aiProvider               String?
+  aiModel                  String?
+  generationStatus         String    @default("pending")
+  confidence               Float?
+  approvedAt               DateTime?
+  approvedBodyHash         String?
+  sentAt                   DateTime?
+  createdAt                DateTime  @default(now())
+  updatedAt                DateTime  @updatedAt
 
   auditEvents MessageAuditEvent[]
 

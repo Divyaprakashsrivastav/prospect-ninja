@@ -5,7 +5,16 @@ import { generateDraftForProspect, getMessage } from "@/modules/outreach/service
 
 type Params = { params: Promise<{ id: string }> };
 
-export async function POST(_: Request, { params }: Params) {
+async function readReplaceExisting(request: Request) {
+  try {
+    const body = (await request.json()) as { replaceExisting?: unknown };
+    return body.replaceExisting === true;
+  } catch {
+    return false;
+  }
+}
+
+export async function POST(request: Request, { params }: Params) {
   const user = await getApiUser();
   if (!user) {
     return jsonError("Unauthorized.", 401);
@@ -16,7 +25,10 @@ export async function POST(_: Request, { params }: Params) {
     if (!existing) {
       return jsonError("Message not found.", 404);
     }
-    const message = await generateDraftForProspect(user.id, existing.prospectId);
+    const replaceExisting = await readReplaceExisting(request);
+    const message = await generateDraftForProspect(user.id, existing.prospectId, {
+      replaceExisting,
+    });
     return NextResponse.json({ message });
   } catch (error) {
     return fromUnknownError(error);

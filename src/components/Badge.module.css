@@ -36,7 +36,23 @@
   color: var(--success);
 }
 
-.paused {
+.paused,
+.none {
   background: #f1f5f9;
   color: var(--muted);
+}
+
+.demo {
+  background: #fffbeb;
+  color: var(--warn);
+}
+
+.completed {
+  background: #ecfdf5;
+  color: var(--success);
+}
+
+.edited {
+  background: #eff6ff;
+  color: var(--info);
 }

@@ -47,7 +47,9 @@ Open http://localhost:3000, register, create an ICP campaign, then **Discover no
 | `DATABASE_URL` | Yes | PostgreSQL connection |
 | `AUTH_SECRET` | Yes | Auth.js signing |
 | `AUTH_URL` | Local | `http://localhost:3000` |
-| `OPENAI_API_KEY` | No | Personalized drafts; otherwise templates |
+| `OPENAI_API_KEY` | No | OpenAI drafts; demo AI is used when empty |
+| `OPENAI_MODEL` | No | Defaults to `gpt-4o-mini` |
+| `AI_PROVIDER` | No | `auto` (default), `openai`, or `demo` |
 | `CRON_SECRET` | Production cron | Bearer token for `/api/jobs/discover` |
 | `HEYREACH_API_KEY` | No | Official provider later; stub stays unconfigured without it |
 | `HEYREACH_API_BASE_URL` | No | Only when HeyReach is wired |

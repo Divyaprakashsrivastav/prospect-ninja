@@ -1,10 +1,15 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { hashBody } from "@/lib/crypto";
-import { getMessageGenerator } from "@/modules/ai";
+import { getAiProvider } from "@/modules/ai";
+import { usableProductDescription } from "@/modules/ai/facts";
 import { parseIcp } from "@/modules/campaigns/schema";
 import { getActiveProvider } from "@/modules/integrations/service";
-import { AUDIT_ACTION, MESSAGE_STATUS } from "@/modules/outreach/constants";
+import {
+  AUDIT_ACTION,
+  GENERATION_STATUS,
+  MESSAGE_STATUS,
+} from "@/modules/outreach/constants";
 import { z } from "zod";
 
 const editSchema = z.object({
@@ -29,9 +34,32 @@ async function writeAudit(input: {
   });
 }
 
+const PROTECTED_STATUSES = new Set<string>([
+  MESSAGE_STATUS.approved,
+  MESSAGE_STATUS.rejected,
+  MESSAGE_STATUS.sent,
+  MESSAGE_STATUS.demoRecorded,
+]);
+
+function isUserEdited(message: {
+  body: string;
+  originalBody: string | null;
+  status: string;
+}): boolean {
+  if (PROTECTED_STATUSES.has(message.status)) {
+    return true;
+  }
+  return Boolean(message.originalBody && message.body !== message.originalBody);
+}
+
+function delay(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export async function generateDraftForProspect(
   userId: string,
   prospectId: string,
+  options: { replaceExisting?: boolean } = {},
 ) {
   const prospect = await prisma.prospect.findFirst({
     where: { id: prospectId, userId },
@@ -40,40 +68,75 @@ export async function generateDraftForProspect(
   if (!prospect) {
     throw new Error("Prospect not found.");
   }
-  const user = await prisma.user.findUniqueOrThrow({ where: { id: userId } });
+
+  const existing = prospect.messages[0];
+  if (existing && isUserEdited(existing)) {
+    throw new Error(
+      "Existing edited or approved draft was not overwritten.",
+    );
+  }
+  if (existing && !options.replaceExisting) {
+    throw new Error(
+      "Confirm replacement of the existing draft before regenerating.",
+    );
+  }
+
   const icp = parseIcp(prospect.campaign.icp);
-  const generator = getMessageGenerator();
-  const draft = await generator.generateDraft({
-    senderName: user.name,
+  if (!usableProductDescription(icp.productService)) {
+    throw new Error(
+      "Configure a real product or service description on the campaign before generating outreach. Placeholder or test copy cannot be used.",
+    );
+  }
+  const provider = getAiProvider();
+  const draft = await provider.generate({
+    senderName: icp.senderName,
+    firstName: prospect.firstName,
+    lastName: prospect.lastName,
     prospectName: prospect.fullName,
+    jobTitle: prospect.jobTitle,
     headline: prospect.headline,
     companyName: prospect.companyName,
+    companySize: prospect.companySize,
     location: prospect.location,
     industry: prospect.industry,
+    summary: prospect.summary,
     campaignName: prospect.campaign.name,
+    campaignDescription: prospect.campaign.description,
     icpTitles: icp.jobTitles,
+    icpIndustries: icp.industries,
+    icpLocations: icp.locations,
     productService: icp.productService,
     outreachObjective: icp.outreachObjective,
     tone: icp.tone,
   });
 
-  const existing = prospect.messages[0];
+  const payload = {
+    body: draft.message,
+    originalBody: draft.message,
+    personalizationReason: draft.personalizationReason,
+    personalizationEvidence: draft.personalizationEvidence,
+    aiProvider: draft.provider,
+    aiModel: draft.model,
+    generationStatus: draft.demo
+      ? GENERATION_STATUS.demo
+      : GENERATION_STATUS.completed,
+    confidence: draft.confidence,
+    status: MESSAGE_STATUS.draft,
+    approvedAt: null,
+    approvedBodyHash: null,
+  };
+
   if (existing) {
     const updated = await prisma.outreachMessage.update({
       where: { id: existing.id },
-      data: {
-        body: draft.body,
-        status: MESSAGE_STATUS.pendingReview,
-        approvedAt: null,
-        approvedBodyHash: null,
-      },
+      data: payload,
     });
     await writeAudit({
       messageId: updated.id,
       actorUserId: userId,
       action: AUDIT_ACTION.generated,
-      bodySnapshot: draft.body,
-      metadata: { source: draft.source, regenerated: true },
+      bodySnapshot: draft.message,
+      metadata: { provider: draft.provider, model: draft.model, regenerated: true },
     });
     return updated;
   }
@@ -82,18 +145,77 @@ export async function generateDraftForProspect(
     data: {
       prospectId: prospect.id,
       campaignId: prospect.campaignId,
-      status: MESSAGE_STATUS.pendingReview,
-      body: draft.body,
+      ...payload,
     },
   });
   await writeAudit({
     messageId: created.id,
     actorUserId: userId,
     action: AUDIT_ACTION.generated,
-    bodySnapshot: draft.body,
-    metadata: { source: draft.source },
+    bodySnapshot: draft.message,
+    metadata: { provider: draft.provider, model: draft.model },
   });
   return created;
+}
+
+export async function generateDraftsForCampaign(
+  userId: string,
+  campaignId: string,
+) {
+  const campaign = await prisma.campaign.findFirst({
+    where: { id: campaignId, userId },
+  });
+  if (!campaign) {
+    throw new Error("Campaign not found.");
+  }
+
+  const prospects = await prisma.prospect.findMany({
+    where: { userId, campaignId },
+    include: { messages: true },
+    orderBy: { discoveredAt: "asc" },
+  });
+
+  const results: Array<{
+    prospectId: string;
+    status: "succeeded" | "failed" | "skipped";
+    error?: string;
+    messageId?: string;
+  }> = [];
+
+  const provider = getAiProvider();
+  const throttleMs = provider.id === "openai" ? 350 : 0;
+
+  for (const prospect of prospects) {
+    const existing = prospect.messages[0];
+    if (existing) {
+      results.push({ prospectId: prospect.id, status: "skipped" });
+      continue;
+    }
+    try {
+      const message = await generateDraftForProspect(userId, prospect.id);
+      results.push({
+        prospectId: prospect.id,
+        status: "succeeded",
+        messageId: message.id,
+      });
+    } catch (error) {
+      results.push({
+        prospectId: prospect.id,
+        status: "failed",
+        error: error instanceof Error ? error.message : "Generation failed",
+      });
+    }
+    if (throttleMs > 0) {
+      await delay(throttleMs);
+    }
+  }
+
+  return {
+    succeeded: results.filter((item) => item.status === "succeeded").length,
+    failed: results.filter((item) => item.status === "failed").length,
+    skipped: results.filter((item) => item.status === "skipped").length,
+    results,
+  };
 }
 
 export async function listApprovalQueue(userId: string) {

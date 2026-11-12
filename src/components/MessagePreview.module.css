@@ -1,0 +1,47 @@
+.layout {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: 1.2fr 0.8fr;
+}
+
+.message {
+  white-space: pre-wrap;
+  font-family: inherit;
+  line-height: 1.55;
+  margin-bottom: 16px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: #f8fafc;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.meta {
+  color: var(--muted);
+  font-size: 13px;
+  margin-top: 16px;
+}
+
+.section {
+  margin: 16px 0 8px;
+}
+
+.evidence {
+  margin-top: 8px;
+  padding-left: 18px;
+}
+
+.fact {
+  margin-bottom: 6px;
+}
+
+@media (max-width: 800px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+}

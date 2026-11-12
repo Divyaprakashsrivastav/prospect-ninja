@@ -1,29 +1,150 @@
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { utcDateOnly } from "@/lib/dates";
-import { parseIcp } from "@/modules/campaigns/schema";
-import { getActiveProvider } from "@/modules/integrations/service";
-import { generateDraftForProspect } from "@/modules/outreach/service";
+import { DAILY_PROSPECT_LIMIT, parseIcp } from "@/modules/campaigns/schema";
+import { getProspectProvider } from "@/modules/discovery";
+import { isExcluded, scoreProspect } from "@/modules/discovery/match";
+import { criteriaFromIcp } from "@/modules/discovery/types";
+import type { ProspectProvider } from "@/modules/discovery/types";
+import type { ProviderProspectRecord } from "@/modules/discovery/types";
 
-const DEFAULT_DAILY_LIMIT = 15;
+export type ProspectListFilters = {
+  campaignId?: string;
+  q?: string;
+  jobTitle?: string;
+  industry?: string;
+  location?: string;
+  page?: number;
+  pageSize?: number;
+};
 
-export async function listProspects(userId: string, campaignId?: string) {
-  return prisma.prospect.findMany({
+export async function getDiscoveryQuota(userId: string, campaignId: string) {
+  const campaign = await prisma.campaign.findFirst({
+    where: { id: campaignId, userId },
+    select: { id: true, dailyDiscoverLimit: true },
+  });
+  if (!campaign) {
+    throw new Error("Campaign not found.");
+  }
+  const limit = Math.min(campaign.dailyDiscoverLimit, DAILY_PROSPECT_LIMIT);
+  const run = await prisma.discoveryRun.findUnique({
     where: {
-      userId,
-      ...(campaignId ? { campaignId } : {}),
+      campaignId_runDate: { campaignId, runDate: utcDateOnly() },
     },
+  });
+  const used = run?.discoveredCount ?? 0;
+  return {
+    campaignId,
+    limit,
+    used,
+    remaining: Math.max(limit - used, 0),
+  };
+}
+
+export async function listProspects(
+  userId: string,
+  filters: ProspectListFilters = {},
+) {
+  const page = Math.max(filters.page ?? 1, 1);
+  const pageSize = Math.min(Math.max(filters.pageSize ?? 20, 1), 50);
+  const where: Prisma.ProspectWhereInput = {
+    userId,
+    ...(filters.campaignId ? { campaignId: filters.campaignId } : {}),
+    ...(filters.jobTitle
+      ? { jobTitle: { contains: filters.jobTitle, mode: "insensitive" } }
+      : {}),
+    ...(filters.industry
+      ? { industry: { contains: filters.industry, mode: "insensitive" } }
+      : {}),
+    ...(filters.location
+      ? { location: { contains: filters.location, mode: "insensitive" } }
+      : {}),
+    ...(filters.q
+      ? {
+          OR: [
+            { fullName: { contains: filters.q, mode: "insensitive" } },
+            { companyName: { contains: filters.q, mode: "insensitive" } },
+            { jobTitle: { contains: filters.q, mode: "insensitive" } },
+            { headline: { contains: filters.q, mode: "insensitive" } },
+          ],
+        }
+      : {}),
+  };
+
+  const [total, prospects] = await Promise.all([
+    prisma.prospect.count({ where }),
+    prisma.prospect.findMany({
+      where,
+      include: {
+        campaign: { select: { name: true } },
+        messages: {
+          select: {
+            id: true,
+            status: true,
+            generationStatus: true,
+            aiProvider: true,
+            body: true,
+            originalBody: true,
+          },
+          take: 1,
+        },
+      },
+      orderBy: [{ matchScore: "desc" }, { discoveredAt: "desc" }],
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+    }),
+  ]);
+
+  return {
+    prospects,
+    total,
+    page,
+    pageSize,
+    pageCount: Math.max(Math.ceil(total / pageSize), 1),
+  };
+}
+
+export async function getProspect(userId: string, id: string) {
+  return prisma.prospect.findFirst({
+    where: { id, userId },
     include: {
-      campaign: { select: { name: true } },
+      campaign: { select: { id: true, name: true } },
       messages: {
-        select: { id: true, status: true },
         take: 1,
       },
     },
-    orderBy: { discoveredAt: "desc" },
   });
 }
 
-export async function discoverForCampaign(userId: string, campaignId: string) {
+function normalizeRecord(record: ProviderProspectRecord) {
+  return {
+    provider: record.provider,
+    externalId: record.providerProspectId,
+    linkedinUrl: record.profileUrl,
+    firstName: record.firstName,
+    lastName: record.lastName,
+    fullName: `${record.firstName} ${record.lastName}`.trim(),
+    jobTitle: record.jobTitle,
+    headline: record.jobTitle,
+    companyName: record.company,
+    companySize: record.companySize,
+    location: record.location,
+    industry: record.industry,
+    summary: record.professionalSummary,
+    isDemo: record.isDemo,
+    rawProfile: {
+      providerProspectId: record.providerProspectId,
+      labelled: record.isDemo ? "DEMO DATA" : "provider",
+      companySize: record.companySize,
+    },
+  };
+}
+
+export async function discoverForCampaign(
+  userId: string,
+  campaignId: string,
+  providerOverride?: ProspectProvider,
+) {
   const campaign = await prisma.campaign.findFirst({
     where: { id: campaignId, userId },
   });
@@ -34,12 +155,25 @@ export async function discoverForCampaign(userId: string, campaignId: string) {
     throw new Error("Campaign is paused.");
   }
 
-  const limit = Math.min(campaign.dailyDiscoverLimit, DEFAULT_DAILY_LIMIT);
+  const limit = Math.min(campaign.dailyDiscoverLimit, DAILY_PROSPECT_LIMIT);
   const runDate = utcDateOnly();
-  const provider = await getActiveProvider(userId);
+  const provider = providerOverride ?? (await getProspectProvider(userId));
+  const connection = await provider.validateConnection();
+  if (!connection.ok && !providerOverride) {
+    throw new Error(connection.message);
+  }
   const icp = parseIcp(campaign.icp);
+  const search = await provider.searchProspects(
+    criteriaFromIcp(icp, 50),
+  );
+  const providerReturned = search.records.length;
 
-  const addedIds: string[] = [];
+  const added: Array<{
+    id: string;
+    fullName: string;
+    matchScore: number;
+    matchReasons: string[];
+  }> = [];
   let skippedDuplicates = 0;
   let remaining = 0;
 
@@ -70,23 +204,26 @@ export async function discoverForCampaign(userId: string, campaignId: string) {
       return;
     }
 
-    const candidates = await provider.discoverProspects({
-      icp,
-      limit: remaining,
-    });
-
-    for (const candidate of candidates) {
-      if (addedIds.length >= remaining) {
+    for (const record of search.records) {
+      if (added.length >= remaining) {
         break;
       }
+      if (isExcluded(record, icp)) {
+        continue;
+      }
+      const match = scoreProspect(record, icp);
+      if (match.score <= 0) {
+        continue;
+      }
+      const normalized = normalizeRecord(record);
       const duplicate = await tx.prospect.findFirst({
         where: {
           userId,
           OR: [
-            { linkedinUrl: candidate.linkedinUrl },
+            { linkedinUrl: normalized.linkedinUrl },
             {
-              provider: candidate.provider,
-              externalId: candidate.externalId,
+              provider: normalized.provider,
+              externalId: normalized.externalId,
             },
           ],
         },
@@ -100,47 +237,65 @@ export async function discoverForCampaign(userId: string, campaignId: string) {
           data: {
             userId,
             campaignId,
-            provider: candidate.provider,
-            externalId: candidate.externalId,
-            linkedinUrl: candidate.linkedinUrl,
-            fullName: candidate.fullName,
-            headline: candidate.headline,
-            companyName: candidate.companyName,
-            location: candidate.location,
-            industry: candidate.industry,
-            rawProfile: candidate.rawProfile,
+            provider: normalized.provider,
+            externalId: normalized.externalId,
+            linkedinUrl: normalized.linkedinUrl,
+            fullName: normalized.fullName,
+            firstName: normalized.firstName,
+            lastName: normalized.lastName,
+            headline: normalized.headline,
+            jobTitle: normalized.jobTitle,
+            companyName: normalized.companyName,
+            companySize: normalized.companySize,
+            location: normalized.location,
+            industry: normalized.industry,
+            summary: normalized.summary,
+            matchScore: match.score,
+            matchReasons: match.reasons,
+            isDemo: normalized.isDemo,
+            rawProfile: normalized.rawProfile,
           },
         });
-        addedIds.push(created.id);
-      } catch {
-        skippedDuplicates += 1;
+        added.push({
+          id: created.id,
+          fullName: created.fullName,
+          matchScore: match.score,
+          matchReasons: match.reasons,
+        });
+      } catch (error) {
+        if (
+          error instanceof Prisma.PrismaClientKnownRequestError &&
+          error.code === "P2002"
+        ) {
+          skippedDuplicates += 1;
+          continue;
+        }
+        throw error;
       }
     }
 
     await tx.discoveryRun.update({
       where: { id: run.id },
       data: {
-        discoveredCount: { increment: addedIds.length },
+        discoveredCount: { increment: added.length },
         status: "completed",
       },
     });
   });
 
-  for (const prospectId of addedIds) {
-    try {
-      await generateDraftForProspect(userId, prospectId);
-    } catch (error) {
-      console.error("Draft generation failed", prospectId, error);
-    }
-  }
+  const quota = await getDiscoveryQuota(userId, campaignId);
 
   return {
-    added: addedIds.length,
+    added: added.length,
+    prospects: added,
     skippedDuplicates,
-    remainingAfter: Math.max(remaining - addedIds.length, 0),
+    remainingAfter: quota.remaining,
     dailyLimit: limit,
+    usedToday: quota.used,
     provider: provider.id,
     demo: provider.id === "demo",
+    providerReturned,
+    emptyProvider: providerReturned === 0,
   };
 }
 
