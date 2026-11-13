@@ -1,17 +1,19 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
-import { prisma } from "@/lib/db";
+import { withDatabaseFallback } from "@/lib/db";
 
 async function loadExistingUser() {
   const session = await auth();
   const id = session?.user?.id;
-  if (!id) {
+  if (!id || typeof id !== "string") {
     return { session, user: null as null };
   }
-  const user = await prisma.user.findUnique({
-    where: { id },
-    select: { id: true, email: true, name: true },
-  });
+  const user = await withDatabaseFallback((client) =>
+    client.user.findUnique({
+      where: { id },
+      select: { id: true, email: true, name: true },
+    }),
+  );
   return { session, user };
 }
 

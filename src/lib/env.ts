@@ -11,8 +11,8 @@ function authUrl(): string {
   if (value) {
     return value;
   }
-  if (process.env.NODE_ENV === "production") {
-    throw new Error("AUTH_URL is not set.");
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}`;
   }
   return "http://localhost:3000";
 }

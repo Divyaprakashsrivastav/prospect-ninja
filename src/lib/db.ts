@@ -1,4 +1,7 @@
+import dns from "node:dns";
 import { Prisma, PrismaClient } from "@prisma/client";
+
+dns.setDefaultResultOrder("ipv4first");
 
 const globalForPrisma = globalThis as unknown as {
   prisma?: PrismaClient;
@@ -8,12 +11,19 @@ const globalForPrisma = globalThis as unknown as {
 const log: Array<"error" | "warn"> =
   process.env.NODE_ENV === "development" ? ["error", "warn"] : ["error"];
 
+function withConnectTimeout(url: string): string {
+  if (/[?&]connect_timeout=/i.test(url)) {
+    return url;
+  }
+  return `${url}${url.includes("?") ? "&" : "?"}connect_timeout=15`;
+}
+
 function databaseUrl(): string {
   const url = process.env.DATABASE_URL;
   if (!url) {
     throw new Error("DATABASE_URL is not set.");
   }
-  return url;
+  return withConnectTimeout(url);
 }
 
 function sessionUrl(): string {
@@ -23,7 +33,7 @@ function sessionUrl(): string {
       "DIRECT_URL is not set. Interactive transactions need the Supabase session pooler or direct connection (port 5432), not the transaction pooler (6543).",
     );
   }
-  return url;
+  return withConnectTimeout(url);
 }
 
 function postgresPort(url: string): string {
@@ -31,23 +41,44 @@ function postgresPort(url: string): string {
   return parsed.port || "5432";
 }
 
-export const prisma =
-  globalForPrisma.prisma ??
-  new PrismaClient({
+function createClient(url: string): PrismaClient {
+  return new PrismaClient({
     log,
-    datasourceUrl: databaseUrl(),
+    datasourceUrl: url,
   });
+}
 
-/** Session-mode client. PgBouncer transaction mode cannot hold Prisma interactive transactions. */
-export const prismaTx =
-  globalForPrisma.prismaTx ??
-  new PrismaClient({
-    log,
-    datasourceUrl: sessionUrl(),
-  });
-
+export const prisma = globalForPrisma.prisma ?? createClient(databaseUrl());
 globalForPrisma.prisma = prisma;
-globalForPrisma.prismaTx = prismaTx;
+
+function getPrismaTx(): PrismaClient {
+  if (!globalForPrisma.prismaTx) {
+    globalForPrisma.prismaTx = createClient(sessionUrl());
+  }
+  return globalForPrisma.prismaTx;
+}
+
+function isUnreachable(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    (error as { code?: string }).code === "P1001"
+  );
+}
+
+export async function withDatabaseFallback<T>(
+  query: (client: PrismaClient) => Promise<T>,
+): Promise<T> {
+  try {
+    return await query(prisma);
+  } catch (error) {
+    if (!isUnreachable(error)) {
+      throw error;
+    }
+    return query(getPrismaTx());
+  }
+}
 
 export async function runInteractiveTransaction<T>(
   fn: (tx: Prisma.TransactionClient) => Promise<T>,
@@ -64,7 +95,7 @@ export async function runInteractiveTransaction<T>(
     throw new Error("Both database URLs are transaction-mode poolers.");
   }
 
-  return prismaTx.$transaction(fn, {
+  return getPrismaTx().$transaction(fn, {
     maxWait: options?.maxWait ?? 10_000,
     timeout: options?.timeout ?? 30_000,
   });

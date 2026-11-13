@@ -8,19 +8,21 @@ import { Card } from "@/components/Card";
 import { Field, TextInput } from "@/components/Field";
 import styles from "./AuthForm.module.css";
 
-export function LoginForm() {
+export function LoginForm({ configError }: { configError?: string }) {
   const [state, action, pending] = useActionState(
     async (_prev: { error?: string } | undefined, formData: FormData) =>
       loginAction(formData),
     undefined,
   );
 
+  const error = state?.error ?? configError;
+
   return (
     <div className={styles.page}>
       <Card className={styles.card}>
         <h1 className={styles.title}>Sign in</h1>
         <p className={styles.sub}>Human-approved LinkedIn outreach workspace.</p>
-        {state?.error ? <p className={styles.error}>{state.error}</p> : null}
+        {error ? <p className={styles.error}>{error}</p> : null}
         <form action={action}>
           <Field label="Email">
             <TextInput name="email" type="email" required autoComplete="email" />
