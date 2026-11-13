@@ -20,9 +20,9 @@ This MVP does **not** scrape LinkedIn, automate a browser, or collect LinkedIn p
 copy .env.example .env.local
 ```
 
-2. Set `AUTH_SECRET` and `CRON_SECRET` to long random strings. Set `DATABASE_URL` to PostgreSQL.
+2. Set `AUTH_SECRET` and `CRON_SECRET` to long random strings. Set `DATABASE_URL` (app / pooled) and `DIRECT_URL` (migrations / direct) to PostgreSQL. For Supabase, copy both from Project Settings → Database.
 
-3. Start PostgreSQL. This machine does not have Docker or a system Postgres install, so use the bundled local cluster:
+3. If you are using local PostgreSQL instead of Supabase, start it. This machine does not have Docker or a system Postgres install, so use the bundled local cluster:
 
 ```bash
 npm run db:up
@@ -44,14 +44,16 @@ Open http://localhost:3000, register, create an ICP campaign, then **Discover no
 
 | Name | Required | Purpose |
 | --- | --- | --- |
-| `DATABASE_URL` | Yes | PostgreSQL connection |
-| `AUTH_SECRET` | Yes | Auth.js signing |
-| `AUTH_URL` | Local | `http://localhost:3000` |
+| `DATABASE_URL` | Yes | App queries. Supabase transaction pooler, port 6543, `pgbouncer=true` |
+| `DIRECT_URL` | Yes | Migrations and interactive transactions. Supabase session pooler or direct DB, port 5432 |
+| `AUTH_SECRET` | Yes | Auth.js JWT signing |
+| `AUTH_URL` | Yes in production | Local: `http://localhost:3000`. Vercel: `https://YOUR-PROJECT.vercel.app` |
+| `AUTH_TRUST_HOST` | Yes on Vercel | `true` so Auth.js trusts the deployment host |
 | `OPENAI_API_KEY` | No | OpenAI drafts; demo AI is used when empty |
 | `OPENAI_MODEL` | No | Defaults to `gpt-4o-mini` |
 | `AI_PROVIDER` | No | `auto` (default), `openai`, or `demo` |
-| `CRON_SECRET` | Production cron | Bearer token for `/api/jobs/discover` |
-| `HEYREACH_API_KEY` | No | Official provider later; stub stays unconfigured without it |
+| `CRON_SECRET` | Yes for Vercel Cron | Bearer token for `/api/jobs/discover` |
+| `HEYREACH_API_KEY` | No | Official send later; demo provider is used when empty |
 | `HEYREACH_API_BASE_URL` | No | Only when HeyReach is wired |
 
 Never put API keys in client components. Do not commit `.env` or `.env.local`.
@@ -65,10 +67,10 @@ Never put API keys in client components. Do not commit `.env` or `.env.local`.
 
 ## Deploy (Vercel)
 
-1. Create a hosted Postgres database (Neon or Supabase).
-2. Set the env vars above in the Vercel project.
-3. `npx prisma migrate deploy` against production (or a CI step).
-4. Deploy. Confirm `CRON_SECRET` is set so Vercel Cron can authorize.
+1. Create a hosted Postgres database (this project uses Supabase).
+2. Set every required env var above on the Vercel project (Production and Preview).
+3. If that database has not already received Prisma migrations, run `npx prisma migrate deploy` against it. Do not use `migrate reset`.
+4. Deploy. `vercel.json` already schedules daily discovery; `CRON_SECRET` must be set so Vercel Cron can authorize.
 
 ## Rules encoded in the product
 

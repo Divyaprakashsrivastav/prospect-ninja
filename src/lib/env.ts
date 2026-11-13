@@ -6,10 +6,21 @@ function optional(name: string): string | undefined {
   return value;
 }
 
+function authUrl(): string {
+  const value = optional("AUTH_URL");
+  if (value) {
+    return value;
+  }
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("AUTH_URL is not set.");
+  }
+  return "http://localhost:3000";
+}
+
 export const env = {
   databaseUrl: process.env.DATABASE_URL,
   authSecret: process.env.AUTH_SECRET,
-  authUrl: optional("AUTH_URL") ?? "http://localhost:3000",
+  authUrl: authUrl(),
   openaiApiKey: optional("OPENAI_API_KEY"),
   openaiModel: optional("OPENAI_MODEL") ?? "gpt-4o-mini",
   aiProvider: optional("AI_PROVIDER") ?? "auto",

@@ -1,5 +1,5 @@
 import { Prisma } from "@prisma/client";
-import { prisma } from "@/lib/db";
+import { prisma, runInteractiveTransaction } from "@/lib/db";
 import { hashBody } from "@/lib/crypto";
 import { getAiProvider } from "@/modules/ai";
 import { usableProductDescription } from "@/modules/ai/facts";
@@ -126,36 +126,34 @@ export async function generateDraftForProspect(
     approvedBodyHash: null,
   };
 
-  if (existing) {
-    const updated = await prisma.outreachMessage.update({
-      where: { id: existing.id },
-      data: payload,
+  return runInteractiveTransaction(async (tx) => {
+    const saved = existing
+      ? await tx.outreachMessage.update({
+          where: { id: existing.id },
+          data: payload,
+        })
+      : await tx.outreachMessage.create({
+          data: {
+            prospectId: prospect.id,
+            campaignId: prospect.campaignId,
+            ...payload,
+          },
+        });
+    await tx.messageAuditEvent.create({
+      data: {
+        messageId: saved.id,
+        actorUserId: userId,
+        action: AUDIT_ACTION.generated,
+        bodySnapshot: draft.message,
+        metadata: {
+          provider: draft.provider,
+          model: draft.model,
+          regenerated: Boolean(existing),
+        },
+      },
     });
-    await writeAudit({
-      messageId: updated.id,
-      actorUserId: userId,
-      action: AUDIT_ACTION.generated,
-      bodySnapshot: draft.message,
-      metadata: { provider: draft.provider, model: draft.model, regenerated: true },
-    });
-    return updated;
-  }
-
-  const created = await prisma.outreachMessage.create({
-    data: {
-      prospectId: prospect.id,
-      campaignId: prospect.campaignId,
-      ...payload,
-    },
+    return saved;
   });
-  await writeAudit({
-    messageId: created.id,
-    actorUserId: userId,
-    action: AUDIT_ACTION.generated,
-    bodySnapshot: draft.message,
-    metadata: { provider: draft.provider, model: draft.model },
-  });
-  return created;
 }
 
 export async function generateDraftsForCampaign(
@@ -265,22 +263,26 @@ export async function editMessage(userId: string, id: string, body: string) {
   ) {
     throw new Error("Sent or recorded messages cannot be edited.");
   }
-  const updated = await prisma.outreachMessage.update({
-    where: { id },
-    data: {
-      body: parsed.body,
-      status: MESSAGE_STATUS.pendingReview,
-      approvedAt: null,
-      approvedBodyHash: null,
-    },
+  return runInteractiveTransaction(async (tx) => {
+    const updated = await tx.outreachMessage.update({
+      where: { id },
+      data: {
+        body: parsed.body,
+        status: MESSAGE_STATUS.pendingReview,
+        approvedAt: null,
+        approvedBodyHash: null,
+      },
+    });
+    await tx.messageAuditEvent.create({
+      data: {
+        messageId: id,
+        actorUserId: userId,
+        action: AUDIT_ACTION.edited,
+        bodySnapshot: parsed.body,
+      },
+    });
+    return updated;
   });
-  await writeAudit({
-    messageId: id,
-    actorUserId: userId,
-    action: AUDIT_ACTION.edited,
-    bodySnapshot: parsed.body,
-  });
-  return updated;
 }
 
 export async function approveMessage(userId: string, id: string) {
@@ -297,21 +299,25 @@ export async function approveMessage(userId: string, id: string) {
   ) {
     throw new Error("This message was already processed.");
   }
-  const updated = await prisma.outreachMessage.update({
-    where: { id },
-    data: {
-      status: MESSAGE_STATUS.approved,
-      approvedAt: new Date(),
-      approvedBodyHash: hashBody(message.body),
-    },
+  return runInteractiveTransaction(async (tx) => {
+    const updated = await tx.outreachMessage.update({
+      where: { id },
+      data: {
+        status: MESSAGE_STATUS.approved,
+        approvedAt: new Date(),
+        approvedBodyHash: hashBody(message.body),
+      },
+    });
+    await tx.messageAuditEvent.create({
+      data: {
+        messageId: id,
+        actorUserId: userId,
+        action: AUDIT_ACTION.approved,
+        bodySnapshot: message.body,
+      },
+    });
+    return updated;
   });
-  await writeAudit({
-    messageId: id,
-    actorUserId: userId,
-    action: AUDIT_ACTION.approved,
-    bodySnapshot: message.body,
-  });
-  return updated;
 }
 
 export async function rejectMessage(userId: string, id: string) {
@@ -325,21 +331,25 @@ export async function rejectMessage(userId: string, id: string) {
   ) {
     throw new Error("This message was already processed.");
   }
-  const updated = await prisma.outreachMessage.update({
-    where: { id },
-    data: {
-      status: MESSAGE_STATUS.rejected,
-      approvedAt: null,
-      approvedBodyHash: null,
-    },
+  return runInteractiveTransaction(async (tx) => {
+    const updated = await tx.outreachMessage.update({
+      where: { id },
+      data: {
+        status: MESSAGE_STATUS.rejected,
+        approvedAt: null,
+        approvedBodyHash: null,
+      },
+    });
+    await tx.messageAuditEvent.create({
+      data: {
+        messageId: id,
+        actorUserId: userId,
+        action: AUDIT_ACTION.rejected,
+        bodySnapshot: message.body,
+      },
+    });
+    return updated;
   });
-  await writeAudit({
-    messageId: id,
-    actorUserId: userId,
-    action: AUDIT_ACTION.rejected,
-    bodySnapshot: message.body,
-  });
-  return updated;
 }
 
 export async function sendMessage(userId: string, id: string) {
@@ -387,56 +397,71 @@ export async function sendMessage(userId: string, id: string) {
   });
 
   if (!result.ok) {
-    const failed = await prisma.outreachMessage.update({
-      where: { id },
-      data: { status: MESSAGE_STATUS.failed },
+    return runInteractiveTransaction(async (tx) => {
+      const failed = await tx.outreachMessage.update({
+        where: { id },
+        data: { status: MESSAGE_STATUS.failed },
+      });
+      await tx.messageAuditEvent.create({
+        data: {
+          messageId: id,
+          actorUserId: userId,
+          action: AUDIT_ACTION.sendFailed,
+          bodySnapshot: message.body,
+          metadata: { error: result.error },
+        },
+      });
+      return failed;
     });
-    await writeAudit({
-      messageId: id,
-      actorUserId: userId,
-      action: AUDIT_ACTION.sendFailed,
-      bodySnapshot: message.body,
-      metadata: { error: result.error },
-    });
-    return failed;
   }
 
   if (result.simulated || provider.id === "demo") {
-    const recorded = await prisma.outreachMessage.update({
+    return runInteractiveTransaction(async (tx) => {
+      const recorded = await tx.outreachMessage.update({
+        where: { id },
+        data: {
+          status: MESSAGE_STATUS.demoRecorded,
+          sentAt: new Date(),
+        },
+      });
+      await tx.messageAuditEvent.create({
+        data: {
+          messageId: id,
+          actorUserId: userId,
+          action: AUDIT_ACTION.demoSend,
+          bodySnapshot: message.body,
+          metadata: {
+            provider: provider.id,
+            note: "Not sent — demo provider",
+          },
+        },
+      });
+      return recorded;
+    });
+  }
+
+  return runInteractiveTransaction(async (tx) => {
+    const sent = await tx.outreachMessage.update({
       where: { id },
       data: {
-        status: MESSAGE_STATUS.demoRecorded,
+        status: MESSAGE_STATUS.sent,
         sentAt: new Date(),
       },
     });
-    await writeAudit({
-      messageId: id,
-      actorUserId: userId,
-      action: AUDIT_ACTION.demoSend,
-      bodySnapshot: message.body,
-      metadata: {
-        provider: provider.id,
-        note: "Not sent — demo provider",
+    await tx.messageAuditEvent.create({
+      data: {
+        messageId: id,
+        actorUserId: userId,
+        action: AUDIT_ACTION.sendSucceeded,
+        bodySnapshot: message.body,
+        metadata: {
+          provider: provider.id,
+          providerMessageId: result.providerMessageId,
+        },
       },
     });
-    return recorded;
-  }
-
-  const sent = await prisma.outreachMessage.update({
-    where: { id },
-    data: {
-      status: MESSAGE_STATUS.sent,
-      sentAt: new Date(),
-    },
+    return sent;
   });
-  await writeAudit({
-    messageId: id,
-    actorUserId: userId,
-    action: AUDIT_ACTION.sendSucceeded,
-    bodySnapshot: message.body,
-    metadata: { provider: provider.id, providerMessageId: result.providerMessageId },
-  });
-  return sent;
 }
 
 export async function listHistory(userId: string) {

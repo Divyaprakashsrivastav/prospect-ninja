@@ -1,5 +1,5 @@
 import { Prisma } from "@prisma/client";
-import { prisma } from "@/lib/db";
+import { prisma, runInteractiveTransaction } from "@/lib/db";
 import { utcDateOnly } from "@/lib/dates";
 import { DAILY_PROSPECT_LIMIT, parseIcp } from "@/modules/campaigns/schema";
 import { getProspectProvider } from "@/modules/discovery";
@@ -177,7 +177,7 @@ export async function discoverForCampaign(
   let skippedDuplicates = 0;
   let remaining = 0;
 
-  await prisma.$transaction(async (tx) => {
+  await runInteractiveTransaction(async (tx) => {
     await tx.$executeRaw`
       SELECT pg_advisory_xact_lock(hashtext(${campaignId}))
     `;

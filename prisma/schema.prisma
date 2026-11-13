@@ -3,8 +3,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model User {
@@ -98,25 +99,25 @@ model DiscoveryRun {
 }
 
 model OutreachMessage {
-  id                       String    @id @default(cuid())
-  prospectId               String    @unique
-  prospect                 Prospect  @relation(fields: [prospectId], references: [id], onDelete: Cascade)
-  campaignId               String
-  campaign                 Campaign  @relation(fields: [campaignId], references: [id], onDelete: Cascade)
-  status                   String
-  body                     String
-  originalBody             String?
-  personalizationReason    String?
-  personalizationEvidence  Json?
-  aiProvider               String?
-  aiModel                  String?
-  generationStatus         String    @default("pending")
-  confidence               Float?
-  approvedAt               DateTime?
-  approvedBodyHash         String?
-  sentAt                   DateTime?
-  createdAt                DateTime  @default(now())
-  updatedAt                DateTime  @updatedAt
+  id                      String    @id @default(cuid())
+  prospectId              String    @unique
+  prospect                Prospect  @relation(fields: [prospectId], references: [id], onDelete: Cascade)
+  campaignId              String
+  campaign                Campaign  @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  status                  String
+  body                    String
+  originalBody            String?
+  personalizationReason   String?
+  personalizationEvidence Json?
+  aiProvider              String?
+  aiModel                 String?
+  generationStatus        String    @default("pending")
+  confidence              Float?
+  approvedAt              DateTime?
+  approvedBodyHash        String?
+  sentAt                  DateTime?
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
 
   auditEvents MessageAuditEvent[]
 
@@ -125,15 +126,15 @@ model OutreachMessage {
 }
 
 model MessageAuditEvent {
-  id           String   @id @default(cuid())
+  id           String          @id @default(cuid())
   messageId    String
   message      OutreachMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
   actorUserId  String
-  actor        User     @relation(fields: [actorUserId], references: [id])
+  actor        User            @relation(fields: [actorUserId], references: [id])
   action       String
   bodySnapshot String
   metadata     Json?
-  createdAt    DateTime @default(now())
+  createdAt    DateTime        @default(now())
 
   @@index([messageId])
 }
