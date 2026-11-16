@@ -22,6 +22,10 @@ export default async function SettingsPage() {
         {env.openaiApiKey
           ? `configured (${env.openaiModel}).`
           : "not configured — DEMO OUTPUT templates are used. An external AI model is not called."}{" "}
+        Prospect discovery uses{" "}
+        {env.rocketreachApiKey
+          ? `RocketReach people search (${env.rocketreachApiMode} API).`
+          : "DEMO DATA — set ROCKETREACH_API_KEY to search real people."}{" "}
         HeyReach is {env.heyreachApiKey ? "configured" : "not configured"}.
       </Banner>
       <Card>

@@ -80,6 +80,7 @@ export function ProspectDiscoveryBar({
         usedToday: number;
         demo?: boolean;
         emptyProvider?: boolean;
+        quotaReached?: boolean;
       };
     };
     setPending(false);
@@ -87,7 +88,11 @@ export function ProspectDiscoveryBar({
       setError(data.error ?? "Discovery failed.");
       return;
     }
-    if (data.result?.emptyProvider && data.result.added === 0) {
+    if (data.result?.quotaReached) {
+      setMessage(
+        `Today's limit of ${data.result.dailyLimit} prospects is already used for this campaign. Try again tomorrow.`,
+      );
+    } else if (data.result?.emptyProvider && data.result.added === 0) {
       setMessage("The provider returned no matching prospects for this ICP.");
     } else {
       const extra = data.result?.demo
