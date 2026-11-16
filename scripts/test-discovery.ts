@@ -1,6 +1,7 @@
 import { prisma } from "../src/lib/db";
 import { createCampaign } from "../src/modules/campaigns/service";
 import type { CampaignInput } from "../src/modules/campaigns/schema";
+import { demoProspectProvider } from "../src/modules/discovery/demoProvider";
 import type { ProspectProvider } from "../src/modules/discovery/types";
 import {
   discoverForCampaign,
@@ -55,6 +56,9 @@ const errorProvider: ProspectProvider = {
   },
 };
 
+// Always use the demo provider here, so a real ROCKETREACH_API_KEY never spends credits in tests.
+const demo = demoProspectProvider;
+
 async function main() {
   const suffix = Date.now().toString();
   const owner = await prisma.user.create({
@@ -74,7 +78,7 @@ async function main() {
 
   const campaign = await createCampaign(owner.id, icp);
 
-  const first = await discoverForCampaign(owner.id, campaign.id);
+  const first = await discoverForCampaign(owner.id, campaign.id, demo);
   if (first.added < 1) {
     throw new Error("Expected demo discovery to store prospects.");
   }
@@ -103,7 +107,7 @@ async function main() {
     throw new Error("Demo records must be labelled as synthetic sample data.");
   }
 
-  const retry = await discoverForCampaign(owner.id, campaign.id);
+  const retry = await discoverForCampaign(owner.id, campaign.id, demo);
   const afterRetry = await prisma.prospect.count({
     where: { userId: owner.id, campaignId: campaign.id },
   });
@@ -119,7 +123,7 @@ async function main() {
     ...icp,
     name: "Discovery QA B",
   });
-  await discoverForCampaign(owner.id, campaignB.id);
+  await discoverForCampaign(owner.id, campaignB.id, demo);
   const quotaB = await getDiscoveryQuota(owner.id, campaignB.id);
   if (quotaB.used > 15 || quotaB.used + quotaB.remaining !== 15) {
     throw new Error("Quota accounting is incorrect.");
@@ -134,7 +138,7 @@ async function main() {
     throw new Error("Other user list leaked owner prospects.");
   }
   try {
-    await discoverForCampaign(other.id, campaign.id);
+    await discoverForCampaign(other.id, campaign.id, demo);
     throw new Error("Other user was allowed to discover on owner campaign.");
   } catch (error) {
     if (!(error instanceof Error) || error.message !== "Campaign not found.") {
@@ -142,13 +146,34 @@ async function main() {
     }
   }
 
-  const empty = await discoverForCampaign(owner.id, campaign.id, emptyProvider);
+  // Once today's quota is used up, discovery must not call the provider (paid searches).
+  // Use the second user, who has no prospects yet, so the demo catalog has no duplicates.
+  const campaignOne = await createCampaign(other.id, {
+    ...icp,
+    name: "Discovery QA quota",
+    dailyDiscoverLimit: 1,
+  });
+  const fill = await discoverForCampaign(other.id, campaignOne.id, demo);
+  if (fill.added !== 1) {
+    throw new Error("Expected one demo prospect to fill a daily limit of 1.");
+  }
+  // errorProvider throws if called, so success proves the provider was skipped.
+  const skipped = await discoverForCampaign(other.id, campaignOne.id, errorProvider);
+  if (!skipped.quotaReached || skipped.added !== 0) {
+    throw new Error("A used-up quota must return quotaReached without calling the provider.");
+  }
+
+  const campaignEmpty = await createCampaign(owner.id, {
+    ...icp,
+    name: "Discovery QA empty",
+  });
+  const empty = await discoverForCampaign(owner.id, campaignEmpty.id, emptyProvider);
   if (empty.added !== 0 || empty.emptyProvider !== true) {
     throw new Error("Empty provider should add nothing.");
   }
 
   try {
-    await discoverForCampaign(owner.id, campaign.id, errorProvider);
+    await discoverForCampaign(owner.id, campaignEmpty.id, errorProvider);
     throw new Error("Error provider should fail.");
   } catch (error) {
     if (!(error instanceof Error) || error.message !== "Provider unavailable.") {
@@ -161,8 +186,8 @@ async function main() {
     name: "Discovery QA concurrent",
   });
   const [a, b] = await Promise.all([
-    discoverForCampaign(owner.id, campaignC.id),
-    discoverForCampaign(owner.id, campaignC.id),
+    discoverForCampaign(owner.id, campaignC.id, demo),
+    discoverForCampaign(owner.id, campaignC.id, demo),
   ]);
   const concurrentCount = await prisma.prospect.count({
     where: { campaignId: campaignC.id },

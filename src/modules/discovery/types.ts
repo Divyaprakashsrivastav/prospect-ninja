@@ -9,6 +9,8 @@ export type ProspectSearchCriteria = {
   exclusions: string[];
   limit: number;
   cursor?: string;
+  /** Provider ids this user already has; paid providers skip them. */
+  excludeIds?: string[];
 };
 
 export type ProviderProspectRecord = {

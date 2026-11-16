@@ -27,6 +27,15 @@ export const env = {
   cronSecret: optional("CRON_SECRET"),
   heyreachApiKey: optional("HEYREACH_API_KEY"),
   heyreachApiBaseUrl: optional("HEYREACH_API_BASE_URL"),
+  rocketreachApiKey: optional("ROCKETREACH_API_KEY"),
+  rocketreachApiBaseUrl:
+    optional("ROCKETREACH_API_BASE_URL") ?? "https://api.rocketreach.co/api/v2",
+  /**
+   * "legacy" uses /person/search (Essentials, Pro, Ultimate plans).
+   * "universal" uses /universal/person/search (Universal Credits plans).
+   */
+  rocketreachApiMode:
+    optional("ROCKETREACH_API_MODE") === "universal" ? "universal" : "legacy",
 };
 
 export function requireDatabaseUrl(): string {

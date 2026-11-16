@@ -163,9 +163,39 @@ export async function discoverForCampaign(
     throw new Error(connection.message);
   }
   const icp = parseIcp(campaign.icp);
-  const search = await provider.searchProspects(
-    criteriaFromIcp(icp, 50),
-  );
+
+  // Paid providers charge per search, so skip the call when today's quota is used up.
+  // The transaction below re-checks the quota under the lock.
+  const quotaBefore = await getDiscoveryQuota(userId, campaignId);
+  if (quotaBefore.remaining === 0) {
+    return {
+      added: 0,
+      prospects: [],
+      skippedDuplicates: 0,
+      remainingAfter: 0,
+      dailyLimit: limit,
+      usedToday: quotaBefore.used,
+      provider: provider.id,
+      demo: provider.id === "demo",
+      providerReturned: 0,
+      emptyProvider: false,
+      quotaReached: true,
+    };
+  }
+
+  const existing = await prisma.prospect.findMany({
+    where: { userId, provider: provider.id },
+    select: { externalId: true },
+  });
+  const search = await provider.searchProspects({
+    // Ask for 2x the remaining quota: some results fail ICP scoring below, and extra
+    // profiles on the same page cost nothing. The demo provider keeps its wider window.
+    ...criteriaFromIcp(
+      icp,
+      provider.id === "demo" ? 50 : quotaBefore.remaining * 2,
+    ),
+    excludeIds: existing.map((row) => row.externalId),
+  });
   const providerReturned = search.records.length;
 
   const added: Array<{
@@ -296,6 +326,7 @@ export async function discoverForCampaign(
     demo: provider.id === "demo",
     providerReturned,
     emptyProvider: providerReturned === 0,
+    quotaReached: false,
   };
 }
 
