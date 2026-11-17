@@ -40,7 +40,12 @@ export function AppNav({
             );
           })}
         </nav>
-        <div className={styles.user}>{userLabel}</div>
+        <div className={styles.user}>
+          <span>{userLabel}</span>
+          <Link className={styles.signOut} href="/api/auth/logout">
+            Sign out
+          </Link>
+        </div>
       </aside>
       <div className={styles.main}>{children}</div>
     </div>

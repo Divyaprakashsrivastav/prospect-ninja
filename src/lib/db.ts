@@ -11,11 +11,19 @@ const globalForPrisma = globalThis as unknown as {
 const log: Array<"error" | "warn"> =
   process.env.NODE_ENV === "development" ? ["error", "warn"] : ["error"];
 
-function withConnectTimeout(url: string): string {
-  if (/[?&]connect_timeout=/i.test(url)) {
+function appendParam(url: string, key: string, value: string): string {
+  if (new RegExp(`[?&]${key}=`, "i").test(url)) {
     return url;
   }
-  return `${url}${url.includes("?") ? "&" : "?"}connect_timeout=15`;
+  return `${url}${url.includes("?") ? "&" : "?"}${key}=${value}`;
+}
+
+function withPoolParams(url: string): string {
+  return appendParam(
+    appendParam(appendParam(url, "connect_timeout", "15"), "connection_limit", "1"),
+    "pool_timeout",
+    "10",
+  );
 }
 
 function databaseUrl(): string {
@@ -23,7 +31,7 @@ function databaseUrl(): string {
   if (!url) {
     throw new Error("DATABASE_URL is not set.");
   }
-  return withConnectTimeout(url);
+  return withPoolParams(url);
 }
 
 function sessionUrl(): string {
@@ -33,7 +41,7 @@ function sessionUrl(): string {
       "DIRECT_URL is not set. Interactive transactions need the Supabase session pooler or direct connection (port 5432), not the transaction pooler (6543).",
     );
   }
-  return withConnectTimeout(url);
+  return withPoolParams(url);
 }
 
 function postgresPort(url: string): string {
@@ -58,26 +66,28 @@ function getPrismaTx(): PrismaClient {
   return globalForPrisma.prismaTx;
 }
 
-function isUnreachable(error: unknown): boolean {
-  return (
-    typeof error === "object" &&
-    error !== null &&
-    "code" in error &&
-    (error as { code?: string }).code === "P1001"
-  );
-}
-
-export async function withDatabaseFallback<T>(
-  query: (client: PrismaClient) => Promise<T>,
-): Promise<T> {
-  try {
-    return await query(prisma);
-  } catch (error) {
-    if (!isUnreachable(error)) {
-      throw error;
-    }
-    return query(getPrismaTx());
+export function isPrismaUnavailable(error: unknown): boolean {
+  if (!error || typeof error !== "object") {
+    return false;
   }
+  const code =
+    "code" in error
+      ? String((error as { code?: string }).code ?? "")
+      : "errorCode" in error
+        ? String((error as { errorCode?: string }).errorCode ?? "")
+        : "";
+  const name = "name" in error ? String((error as { name?: string }).name) : "";
+  const message =
+    "message" in error ? String((error as { message?: string }).message) : "";
+  return (
+    code === "P1001" ||
+    code === "P1017" ||
+    code === "P2024" ||
+    name === "PrismaClientInitializationError" ||
+    /can't reach database server|timed out fetching a new connection|connection pool/i.test(
+      message,
+    )
+  );
 }
 
 export async function runInteractiveTransaction<T>(

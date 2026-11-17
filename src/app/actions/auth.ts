@@ -2,7 +2,8 @@
 
 import { AuthError } from "next-auth";
 import { redirect } from "next/navigation";
-import { signIn, signOut } from "@/auth";
+import { signIn } from "@/auth";
+import { isPrismaUnavailable } from "@/lib/db";
 import { registerUser } from "@/modules/auth/register";
 
 function authConfigErrorMessage() {
@@ -30,9 +31,17 @@ export async function loginAction(formData: FormData) {
       }
       return { error: "Invalid email or password." };
     }
+    if (isPrismaUnavailable(error)) {
+      return { error: "Database is temporarily unavailable. Try again in a moment." };
+    }
     throw error;
   }
-  redirect("/dashboard");
+  const rawCallback = String(formData.get("callbackUrl") ?? "").trim();
+  const callbackPath =
+    rawCallback.startsWith("/") && !rawCallback.startsWith("//")
+      ? rawCallback
+      : "/dashboard";
+  redirect(callbackPath);
 }
 
 export async function registerAction(formData: FormData) {
@@ -43,6 +52,9 @@ export async function registerAction(formData: FormData) {
       password: String(formData.get("password") ?? ""),
     });
   } catch (error) {
+    if (isPrismaUnavailable(error)) {
+      return { error: "Database is temporarily unavailable. Try again in a moment." };
+    }
     return {
       error: error instanceof Error ? error.message : "Could not register.",
     };
@@ -51,5 +63,5 @@ export async function registerAction(formData: FormData) {
 }
 
 export async function logoutAction() {
-  await signOut({ redirectTo: "/login" });
+  redirect("/api/auth/logout");
 }

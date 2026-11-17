@@ -8,7 +8,13 @@ import { Card } from "@/components/Card";
 import { Field, TextInput } from "@/components/Field";
 import styles from "./AuthForm.module.css";
 
-export function LoginForm({ configError }: { configError?: string }) {
+export function LoginForm({
+  configError,
+  callbackUrl,
+}: {
+  configError?: string;
+  callbackUrl?: string;
+}) {
   const [state, action, pending] = useActionState(
     async (_prev: { error?: string } | undefined, formData: FormData) =>
       loginAction(formData),
@@ -24,6 +30,9 @@ export function LoginForm({ configError }: { configError?: string }) {
         <p className={styles.sub}>Human-approved LinkedIn outreach workspace.</p>
         {error ? <p className={styles.error}>{error}</p> : null}
         <form action={action}>
+          {callbackUrl ? (
+            <input type="hidden" name="callbackUrl" value={callbackUrl} />
+          ) : null}
           <Field label="Email">
             <TextInput name="email" type="email" required autoComplete="email" />
           </Field>
