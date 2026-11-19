@@ -5,6 +5,7 @@ import { MessageReview } from "@/components/MessageReview";
 import { PageHeader } from "@/components/PageHeader";
 import { formatDate } from "@/lib/dates";
 import { requireUser } from "@/lib/session";
+import { getLinkedInConnection } from "@/modules/integrations/service";
 import { getMessage } from "@/modules/outreach/service";
 
 export default async function MessagePage({
@@ -14,7 +15,10 @@ export default async function MessagePage({
 }) {
   const user = await requireUser();
   const { id } = await params;
-  const message = await getMessage(user.id, id);
+  const [message, linkedin] = await Promise.all([
+    getMessage(user.id, id),
+    getLinkedInConnection(user.id),
+  ]);
   if (!message) {
     notFound();
   }
@@ -39,6 +43,7 @@ export default async function MessagePage({
             id={message.id}
             body={message.body}
             status={message.status}
+            linkedinLive={linkedin.live}
           />
         </Card>
         <Card>

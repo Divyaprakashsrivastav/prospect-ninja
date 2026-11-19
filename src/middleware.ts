@@ -11,6 +11,7 @@ export const config = {
     "/approval/:path*",
     "/history/:path*",
     "/settings/:path*",
+    "/connect-linkedin/:path*",
     "/login",
     "/register",
   ],

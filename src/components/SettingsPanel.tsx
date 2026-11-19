@@ -35,7 +35,10 @@ export function SettingsPanel({ connections }: { connections: Connection[] }) {
   return (
     <div>
       {error ? <Banner tone="error">{error}</Banner> : null}
-      {connections.map((connection) => (
+      {connections
+        // The Unipile account is managed in its own card (ConnectLinkedInPanel).
+        .filter((connection) => connection.provider !== "unipile")
+        .map((connection) => (
         <div
           key={connection.provider}
           style={{

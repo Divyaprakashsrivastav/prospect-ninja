@@ -18,7 +18,9 @@
     "test:discovery": "node scripts/run-with-env.js npx tsx scripts/test-discovery.ts",
     "test:messages": "node scripts/run-with-env.js npx tsx scripts/test-messages.ts",
     "test:rocketreach": "tsx scripts/test-rocketreach.ts",
-    "check:rocketreach": "node scripts/run-with-env.js npx tsx scripts/check-rocketreach.ts"
+    "check:rocketreach": "node scripts/run-with-env.js npx tsx scripts/check-rocketreach.ts",
+    "check:unipile": "node scripts/run-with-env.js npx tsx scripts/check-unipile.ts",
+    "link:unipile": "node scripts/run-with-env.js npx tsx scripts/link-unipile.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",

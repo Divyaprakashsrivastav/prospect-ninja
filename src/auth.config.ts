@@ -7,6 +7,7 @@ const protectedPrefixes = [
   "/approval",
   "/history",
   "/settings",
+  "/connect-linkedin",
 ];
 
 export const authConfig = {

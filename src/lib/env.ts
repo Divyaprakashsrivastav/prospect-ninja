@@ -25,6 +25,7 @@ export const env = {
   openaiModel: optional("OPENAI_MODEL") ?? "gpt-4o-mini",
   aiProvider: optional("AI_PROVIDER") ?? "auto",
   cronSecret: optional("CRON_SECRET"),
+  unipileApiKey: optional("UNIPILE_API_KEY"),
   heyreachApiKey: optional("HEYREACH_API_KEY"),
   heyreachApiBaseUrl: optional("HEYREACH_API_BASE_URL"),
   rocketreachApiKey: optional("ROCKETREACH_API_KEY"),

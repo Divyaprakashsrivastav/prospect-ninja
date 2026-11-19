@@ -41,40 +41,47 @@ model Campaign {
 }
 
 model IntegrationConnection {
-  id        String   @id @default(cuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  provider  String
-  status    String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                String    @id @default(cuid())
+  userId            String
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider          String
+  status            String
+  /// Account id at the external provider (e.g. Unipile account_id).
+  externalAccountId String?   @unique
+  displayName       String?
+  lastError         String?
+  connectedAt       DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
   @@unique([userId, provider])
 }
 
 model Prospect {
-  id           String   @id @default(cuid())
-  userId       String
-  campaignId   String
-  campaign     Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
-  provider     String
-  externalId   String
-  linkedinUrl  String
-  fullName     String
-  firstName    String   @default("")
-  lastName     String   @default("")
-  headline     String?
-  jobTitle     String?
-  companyName  String?
-  companySize  String?
-  location     String?
-  industry     String?
-  summary      String?
-  matchScore   Int      @default(0)
-  matchReasons Json
-  isDemo       Boolean  @default(true)
-  rawProfile   Json
-  discoveredAt DateTime @default(now())
+  id                 String   @id @default(cuid())
+  userId             String
+  campaignId         String
+  campaign           Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  provider           String
+  externalId         String
+  linkedinUrl        String
+  fullName           String
+  firstName          String   @default("")
+  lastName           String   @default("")
+  headline           String?
+  jobTitle           String?
+  companyName        String?
+  companySize        String?
+  location           String?
+  industry           String?
+  summary            String?
+  /// LinkedIn member id resolved through Unipile, cached after the first lookup.
+  linkedinProviderId String?
+  matchScore         Int      @default(0)
+  matchReasons       Json
+  isDemo             Boolean  @default(true)
+  rawProfile         Json
+  discoveredAt       DateTime @default(now())
 
   messages OutreachMessage[]
 
