@@ -9,16 +9,15 @@ import styles from "@/components/StatGrid.module.css";
 import { requireUser } from "@/lib/session";
 import { getDashboardStats } from "@/modules/analytics/service";
 import { listCampaigns } from "@/modules/campaigns/service";
-import { listConnections } from "@/modules/integrations/service";
+import { getLinkedInConnection } from "@/modules/integrations/service";
 
 export default async function DashboardPage() {
   const user = await requireUser();
-  const [stats, campaigns, connections] = await Promise.all([
+  const [stats, campaigns, linkedin] = await Promise.all([
     getDashboardStats(user.id),
     listCampaigns(user.id),
-    listConnections(user.id),
+    getLinkedInConnection(user.id),
   ]);
-  const demo = connections.find((item) => item.provider === "demo");
 
   return (
     <>
@@ -32,12 +31,17 @@ export default async function DashboardPage() {
           </Link>
         }
       />
-      {demo ? (
+      {linkedin.live ? null : linkedin.status === "needs_reconnect" ? (
         <Banner tone="warn">
-          LinkedIn connection is the labelled demo provider. Sample prospects
-          only — messages are never actually sent.
+          Your LinkedIn session expired, so sends are paused.{" "}
+          <Link href="/connect-linkedin">Reconnect LinkedIn</Link>
         </Banner>
-      ) : null}
+      ) : (
+        <Banner tone="warn">
+          LinkedIn isn&apos;t linked, so sends are simulated and nothing is
+          delivered. <Link href="/connect-linkedin">Connect LinkedIn</Link>
+        </Banner>
+      )}
       <div className={styles.grid}>
         {[
           ["Campaigns", stats.campaignCount],
@@ -47,6 +51,7 @@ export default async function DashboardPage() {
           ["Approved", stats.approved],
           ["Demo recorded", stats.demoRecorded],
           ["Sent", stats.sent],
+          ["Invitations sent", stats.invitationsSent],
           ["Failed", stats.failed],
         ].map(([label, value]) => (
           <div className={styles.stat} key={String(label)}>

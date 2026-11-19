@@ -5,6 +5,8 @@ export const MESSAGE_STATUS = {
   rejected: "rejected",
   demoRecorded: "demo_recorded",
   sent: "sent",
+  /** Not a connection yet: delivered as a LinkedIn connection request with the message as the note. */
+  invitationSent: "invitation_sent",
   failed: "failed",
 } as const;
 
@@ -56,6 +58,7 @@ export const AUDIT_ACTION = {
   rejected: "rejected",
   sendAttempted: "send_attempted",
   sendSucceeded: "send_succeeded",
+  invitationSent: "invitation_sent",
   sendFailed: "send_failed",
   demoSend: "demo_send",
 } as const;

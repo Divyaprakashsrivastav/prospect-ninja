@@ -11,6 +11,7 @@ export async function getDashboardStats(userId: string) {
     approved,
     demoRecorded,
     sent,
+    invitationsSent,
     failed,
     discoveredToday,
   ] = await Promise.all([
@@ -32,6 +33,9 @@ export async function getDashboardStats(userId: string) {
       where: { campaign: { userId }, status: MESSAGE_STATUS.sent },
     }),
     prisma.outreachMessage.count({
+      where: { campaign: { userId }, status: MESSAGE_STATUS.invitationSent },
+    }),
+    prisma.outreachMessage.count({
       where: { campaign: { userId }, status: MESSAGE_STATUS.failed },
     }),
     prisma.prospect.count({
@@ -46,6 +50,7 @@ export async function getDashboardStats(userId: string) {
     approved,
     demoRecorded,
     sent,
+    invitationsSent,
     failed,
     discoveredToday,
   };

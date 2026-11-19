@@ -5,6 +5,7 @@ import { getAiProvider } from "@/modules/ai";
 import { usableProductDescription } from "@/modules/ai/facts";
 import { parseIcp } from "@/modules/campaigns/schema";
 import { getActiveProvider } from "@/modules/integrations/service";
+import { markNeedsReconnect } from "@/modules/integrations/unipileAuth";
 import {
   AUDIT_ACTION,
   GENERATION_STATUS,
@@ -38,8 +39,18 @@ const PROTECTED_STATUSES = new Set<string>([
   MESSAGE_STATUS.approved,
   MESSAGE_STATUS.rejected,
   MESSAGE_STATUS.sent,
+  MESSAGE_STATUS.invitationSent,
   MESSAGE_STATUS.demoRecorded,
 ]);
+
+/** Delivered (or recorded) messages are final and can't be edited, approved or re-sent. */
+function isProcessed(status: string): boolean {
+  return (
+    status === MESSAGE_STATUS.sent ||
+    status === MESSAGE_STATUS.invitationSent ||
+    status === MESSAGE_STATUS.demoRecorded
+  );
+}
 
 function isUserEdited(message: {
   body: string;
@@ -257,10 +268,7 @@ export async function editMessage(userId: string, id: string, body: string) {
   if (!message) {
     throw new Error("Message not found.");
   }
-  if (
-    message.status === MESSAGE_STATUS.sent ||
-    message.status === MESSAGE_STATUS.demoRecorded
-  ) {
+  if (isProcessed(message.status)) {
     throw new Error("Sent or recorded messages cannot be edited.");
   }
   return runInteractiveTransaction(async (tx) => {
@@ -293,10 +301,7 @@ export async function approveMessage(userId: string, id: string) {
   if (message.status === MESSAGE_STATUS.rejected) {
     throw new Error("Rejected messages cannot be approved. Edit first.");
   }
-  if (
-    message.status === MESSAGE_STATUS.sent ||
-    message.status === MESSAGE_STATUS.demoRecorded
-  ) {
+  if (isProcessed(message.status)) {
     throw new Error("This message was already processed.");
   }
   return runInteractiveTransaction(async (tx) => {
@@ -325,10 +330,7 @@ export async function rejectMessage(userId: string, id: string) {
   if (!message) {
     throw new Error("Message not found.");
   }
-  if (
-    message.status === MESSAGE_STATUS.sent ||
-    message.status === MESSAGE_STATUS.demoRecorded
-  ) {
+  if (isProcessed(message.status)) {
     throw new Error("This message was already processed.");
   }
   return runInteractiveTransaction(async (tx) => {
@@ -371,6 +373,9 @@ export async function sendMessage(userId: string, id: string) {
     metadata: { approved },
   });
 
+  if (isProcessed(message.status)) {
+    throw new Error("This message was already processed.");
+  }
   if (!approved) {
     throw new Error(
       "Message must be explicitly approved before sending. Edits require a new approval.",
@@ -378,7 +383,13 @@ export async function sendMessage(userId: string, id: string) {
   }
 
   const provider = await getActiveProvider(userId);
+  if (provider.id === "unipile" && message.prospect.isDemo) {
+    throw new Error(
+      "This is a DEMO DATA prospect, not a real LinkedIn member, so it can't receive real messages.",
+    );
+  }
   const result = await provider.sendMessage({
+    linkedinProviderId: message.prospect.linkedinProviderId,
     prospect: {
       provider: message.prospect.provider as "demo" | "heyreach",
       externalId: message.prospect.externalId,
@@ -396,23 +407,41 @@ export async function sendMessage(userId: string, id: string) {
     body: message.body,
   });
 
+  if (
+    result.resolvedProviderId &&
+    result.resolvedProviderId !== message.prospect.linkedinProviderId
+  ) {
+    await prisma.prospect.update({
+      where: { id: message.prospect.id },
+      data: { linkedinProviderId: result.resolvedProviderId },
+    });
+  }
+
   if (!result.ok) {
-    return runInteractiveTransaction(async (tx) => {
-      const failed = await tx.outreachMessage.update({
-        where: { id },
-        data: { status: MESSAGE_STATUS.failed },
-      });
+    if (result.needsReconnect) {
+      await markNeedsReconnect(userId, result.error ?? "LinkedIn session expired.");
+    }
+    // Nothing was delivered. Fixable problems (expired session, note too long)
+    // keep the message approved so the user can retry; others mark it failed.
+    const keepApproved = Boolean(result.needsReconnect || result.retryable);
+    await runInteractiveTransaction(async (tx) => {
+      if (!keepApproved) {
+        await tx.outreachMessage.update({
+          where: { id },
+          data: { status: MESSAGE_STATUS.failed },
+        });
+      }
       await tx.messageAuditEvent.create({
         data: {
           messageId: id,
           actorUserId: userId,
           action: AUDIT_ACTION.sendFailed,
           bodySnapshot: message.body,
-          metadata: { error: result.error },
+          metadata: { provider: provider.id, error: result.error },
         },
       });
-      return failed;
     });
+    throw new Error(result.error ?? "Send failed.");
   }
 
   if (result.simulated || provider.id === "demo") {
@@ -440,11 +469,12 @@ export async function sendMessage(userId: string, id: string) {
     });
   }
 
+  const invitation = result.kind === "invitation";
   return runInteractiveTransaction(async (tx) => {
     const sent = await tx.outreachMessage.update({
       where: { id },
       data: {
-        status: MESSAGE_STATUS.sent,
+        status: invitation ? MESSAGE_STATUS.invitationSent : MESSAGE_STATUS.sent,
         sentAt: new Date(),
       },
     });
@@ -452,11 +482,16 @@ export async function sendMessage(userId: string, id: string) {
       data: {
         messageId: id,
         actorUserId: userId,
-        action: AUDIT_ACTION.sendSucceeded,
+        action: invitation
+          ? AUDIT_ACTION.invitationSent
+          : AUDIT_ACTION.sendSucceeded,
         bodySnapshot: message.body,
         metadata: {
           provider: provider.id,
-          providerMessageId: result.providerMessageId,
+          kind: result.kind ?? "message",
+          ...(result.providerMessageId
+            ? { providerMessageId: result.providerMessageId }
+            : {}),
         },
       },
     });
@@ -472,6 +507,7 @@ export async function listHistory(userId: string) {
         in: [
           MESSAGE_STATUS.demoRecorded,
           MESSAGE_STATUS.sent,
+          MESSAGE_STATUS.invitationSent,
           MESSAGE_STATUS.failed,
         ],
       },

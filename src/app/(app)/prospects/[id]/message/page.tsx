@@ -5,9 +5,11 @@ import { Badge } from "@/components/Badge";
 import { Card } from "@/components/Card";
 import { CopyMessageButton } from "@/components/CopyMessageButton";
 import { GenerateMessageButton } from "@/components/GenerateMessageButton";
+import { MessageReview } from "@/components/MessageReview";
 import { PageHeader } from "@/components/PageHeader";
 import styles from "@/components/MessagePreview.module.css";
 import { requireUser } from "@/lib/session";
+import { getLinkedInConnection } from "@/modules/integrations/service";
 import { draftGenerationLabel } from "@/modules/outreach/constants";
 import { getProspect } from "@/modules/prospects/service";
 
@@ -25,7 +27,10 @@ export default async function MessagePreviewPage({
 }) {
   const user = await requireUser();
   const { id } = await params;
-  const prospect = await getProspect(user.id, id);
+  const [prospect, linkedin] = await Promise.all([
+    getProspect(user.id, id),
+    getLinkedInConnection(user.id),
+  ]);
   if (!prospect) {
     notFound();
   }
@@ -52,10 +57,12 @@ export default async function MessagePreviewPage({
           DEMO OUTPUT — generated locally. An external AI model was not used.
         </Banner>
       ) : null}
-      <Banner>
-        This screen does not send messages. Regenerating asks for confirmation
-        and will not overwrite edited or approved drafts.
-      </Banner>
+      {prospect.isDemo && linkedin.live ? (
+        <Banner tone="warn">
+          DEMO DATA prospect — not a real LinkedIn member, so it can&apos;t be
+          sent to from your linked account.
+        </Banner>
+      ) : null}
       <div className={styles.layout}>
         <Card>
           {!draft ? (
@@ -77,10 +84,16 @@ export default async function MessagePreviewPage({
                   kept separately and is not shown as the live message.
                 </p>
               ) : null}
-              <pre className={styles.message}>{draft.body}</pre>
+              <MessageReview
+                // Remount when the draft changes server-side (regenerate, send).
+                key={`${draft.id}:${draft.updatedAt.toISOString()}`}
+                id={draft.id}
+                body={draft.body}
+                status={draft.status}
+                linkedinLive={linkedin.live}
+              />
               <div className={styles.actions}>
                 <CopyMessageButton text={draft.body} />
-                <GenerateMessageButton prospectId={prospect.id} hasDraft />
               </div>
             </>
           )}

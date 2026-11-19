@@ -10,6 +10,15 @@ function authConfigErrorMessage() {
 }
 
 export async function loginAction(formData: FormData) {
+  return signInAndRedirect(formData, "/dashboard");
+}
+
+// Not exported: server actions accept any client arguments, so the redirect
+// target must stay server-chosen.
+async function signInAndRedirect(
+  formData: FormData,
+  redirectTo: "/dashboard" | "/connect-linkedin",
+) {
   try {
     const result = await signIn("credentials", {
       email: String(formData.get("email") ?? ""),
@@ -32,7 +41,7 @@ export async function loginAction(formData: FormData) {
     }
     throw error;
   }
-  redirect("/dashboard");
+  redirect(redirectTo);
 }
 
 export async function registerAction(formData: FormData) {
@@ -47,7 +56,8 @@ export async function registerAction(formData: FormData) {
       error: error instanceof Error ? error.message : "Could not register.",
     };
   }
-  return loginAction(formData);
+  // New users go straight to linking their LinkedIn account (they can skip it).
+  return signInAndRedirect(formData, "/connect-linkedin");
 }
 
 export async function logoutAction() {

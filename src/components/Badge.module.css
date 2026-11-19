@@ -31,6 +31,7 @@
 }
 
 .sent,
+.invitation_sent,
 .active {
   background: #ecfdf5;
   color: var(--success);
