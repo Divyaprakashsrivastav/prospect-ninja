@@ -26,6 +26,7 @@ export function LoginForm({
   return (
     <div className={styles.page}>
       <Card className={styles.card}>
+        <p className={styles.brand}>Prospect Ninja</p>
         <h1 className={styles.title}>Sign in</h1>
         <p className={styles.sub}>
           Prospect Ninja — human-approved LinkedIn outreach workspace.

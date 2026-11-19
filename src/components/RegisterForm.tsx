@@ -18,6 +18,7 @@ export function RegisterForm() {
   return (
     <div className={styles.page}>
       <Card className={styles.card}>
+        <p className={styles.brand}>Prospect Ninja</p>
         <h1 className={styles.title}>Create account</h1>
         <p className={styles.sub}>
           Prospect Ninja starts with a labelled demo LinkedIn provider. No

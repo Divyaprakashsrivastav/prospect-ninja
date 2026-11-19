@@ -7,9 +7,11 @@ const protectedPagePrefixes = [
   "/dashboard",
   "/targeting",
   "/prospects",
+  "/studio",
   "/leads",
   "/outreach",
   "/approval",
+  "/analytics",
   "/history",
   "/settings",
 ];
