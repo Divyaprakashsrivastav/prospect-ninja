@@ -8,6 +8,8 @@ const links = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/targeting", label: "Campaigns" },
   { href: "/prospects", label: "Prospects" },
+  { href: "/leads", label: "Leads" },
+  { href: "/outreach", label: "Outreach" },
   { href: "/approval", label: "Approval queue" },
   { href: "/history", label: "History" },
   { href: "/settings", label: "Settings" },
@@ -22,9 +24,9 @@ export function AppNav({
 }) {
   const pathname = usePathname();
   return (
-    <div className={styles.shell}>
+    <div className={styles.shell} suppressHydrationWarning>
       <aside className={styles.sidebar}>
-        <div className={styles.brand}>Outreach Studio</div>
+        <div className={styles.brand}>Prospect Ninja</div>
         <nav className={styles.nav}>
           {links.map((link) => {
             const active =

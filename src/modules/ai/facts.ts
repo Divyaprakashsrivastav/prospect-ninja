@@ -59,6 +59,7 @@ export function buildFactPack(context: DraftContext) {
     ["location", context.location],
     ["industry", context.industry],
     ["summary", context.summary],
+    ["website", context.website],
   ];
   for (const [key, value] of profileFields) {
     const trimmed = value?.trim();
@@ -100,6 +101,13 @@ export function buildFactPack(context: DraftContext) {
   if (campaignDescription && !isPlaceholderCopy(campaignDescription)) {
     campaign.campaignDescription = campaignDescription;
   }
+  const campaignContext = context.campaignContext?.trim();
+  if (campaignContext && !isPlaceholderCopy(campaignContext)) {
+    campaign.campaignContext = campaignContext;
+  }
+  if (context.messageType) {
+    campaign.messageType = context.messageType;
+  }
   if (context.tone?.trim()) {
     campaign.tone = context.tone.trim();
   }
@@ -121,15 +129,18 @@ Return JSON only with keys: message, personalizationReason, personalizationEvide
 The user JSON has verifiedProfile, campaign, and missing.
 
 Rules:
-- Use only verifiedProfile for the prospect. Treat campaign as the sender's offering, not as profile facts.
+- Use only verifiedProfile for the prospect/lead. Treat campaign as the sender's offering, not as profile facts.
 - Never invent achievements, interests, company news, mutual connections, or research.
-- Do not claim you reviewed or researched a LinkedIn profile.
-- Never use sensitive personal information.
+- Do not claim you reviewed or researched a LinkedIn profile or website beyond the supplied website string.
+- Never use sensitive personal information (phone numbers, personal emails) in the message.
 - Avoid generic openings such as "I hope this message finds you well" or "I came across your profile".
 - If senderName is missing, do not introduce or sign with any person. Never invent a sender name.
 - If productService is missing, do not mention a product or invent an offering.
 - Do not make unsupported claims about the product.
 - Do not ask for a meeting, call, or time unless campaign.objectiveRequestsMeeting is "true".
 - Avoid aggressive sales language.
-- Keep the message under 90 words.
+- Respect campaign.messageType when present:
+  - connection_request: short LinkedIn connection note (under 280 characters if possible).
+  - follow_up: concise follow-up that references prior outreach intent without inventing a prior conversation.
+  - professional: standard professional outreach under 90 words.
 - personalizationEvidence must cite verifiedProfile or campaign fields that were actually supplied, prefixed with "verified:" or "campaign:".`;

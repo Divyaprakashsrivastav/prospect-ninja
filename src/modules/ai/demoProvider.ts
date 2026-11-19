@@ -18,37 +18,68 @@ export class DemoAiProvider implements AiProvider {
     const product = pack.campaign.productService;
     const objective = pack.campaign.outreachObjective;
 
+    const messageType = context.messageType ?? "professional";
+    const website = pack.verifiedProfile.website;
+    const campaignContext = pack.campaign.campaignContext;
+
     const lines = ["DEMO OUTPUT — generated locally, not by an external AI model.", ""];
     if (first) {
       lines.push(`Hi ${first},`, "");
     }
 
-    if (title && company) {
+    if (messageType === "connection_request") {
+      const note = [
+        title && company
+          ? `I'd like to connect given your work as ${title} at ${company}.`
+          : company
+            ? `I'd like to connect regarding ${company}.`
+            : "I'd like to connect based on the campaign context we stored.",
+        campaignContext,
+        product,
+      ]
+        .filter(Boolean)
+        .join(" ");
+      lines.push(note.slice(0, 280));
+    } else if (messageType === "follow_up") {
       lines.push(
-        `Your role as ${title} at ${company} is the verified context used here.`,
+        title && company
+          ? `Following up on my earlier note about your role as ${title} at ${company}.`
+          : "Following up on my earlier outreach note.",
       );
-    } else if (company) {
-      lines.push(`${company} is the verified company on file.`);
+      if (campaignContext) {
+        lines.push(campaignContext);
+      } else if (product) {
+        lines.push(product);
+      }
     } else {
-      lines.push("Reaching out based only on the campaign ICP we stored.");
-    }
-
-    if (sender) {
-      lines.push(`This note is from ${sender}.`);
-    }
-
-    if (product) {
-      lines.push(product);
-    }
-
-    if (objective && objectiveRequestsMeeting(objective)) {
-      lines.push(objective);
-    } else if (objective) {
-      lines.push(objective);
-    }
-
-    if (sender) {
-      lines.push("", sender);
+      if (title && company) {
+        lines.push(
+          `Your role as ${title} at ${company} is the verified context used here.`,
+        );
+      } else if (company) {
+        lines.push(`${company} is the verified company on file.`);
+      } else {
+        lines.push("Reaching out based only on the campaign context we stored.");
+      }
+      if (website) {
+        lines.push(`Company site on file: ${website}.`);
+      }
+      if (sender) {
+        lines.push(`This note is from ${sender}.`);
+      }
+      if (campaignContext) {
+        lines.push(campaignContext);
+      } else if (product) {
+        lines.push(product);
+      }
+      if (objective && objectiveRequestsMeeting(objective)) {
+        lines.push(objective);
+      } else if (objective) {
+        lines.push(objective);
+      }
+      if (sender) {
+        lines.push("", sender);
+      }
     }
 
     const evidence = [

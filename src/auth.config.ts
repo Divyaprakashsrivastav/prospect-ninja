@@ -3,19 +3,36 @@ import { ensureAuthUrlEnv } from "@/lib/auth-env";
 
 ensureAuthUrlEnv();
 
-const protectedPrefixes = [
+const protectedPagePrefixes = [
   "/dashboard",
   "/targeting",
   "/prospects",
+  "/leads",
+  "/outreach",
   "/approval",
   "/history",
   "/settings",
 ];
 
-function isProtectedPath(pathname: string): boolean {
-  return protectedPrefixes.some(
+/** Public under /api/v1 — everything else under /api/v1 requires a session. */
+const publicApiExact = new Set(["/api/v1/register"]);
+
+function isProtectedPage(pathname: string): boolean {
+  return protectedPagePrefixes.some(
     (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
   );
+}
+
+function isProtectedApi(pathname: string): boolean {
+  if (!pathname.startsWith("/api/v1")) {
+    return false;
+  }
+  return !publicApiExact.has(pathname);
+}
+
+function hasSessionUser(auth: { user?: { id?: string | null } } | null): boolean {
+  const id = auth?.user?.id;
+  return typeof id === "string" && id.length > 0;
 }
 
 export const authConfig = {
@@ -27,14 +44,21 @@ export const authConfig = {
   },
   session: {
     strategy: "jwt",
+    // 7 days — expired sessions must sign in again.
+    maxAge: 7 * 24 * 60 * 60,
+    updateAge: 24 * 60 * 60,
   },
   providers: [],
   callbacks: {
     authorized({ auth, request: { nextUrl } }) {
-      const isLoggedIn = Boolean(auth?.user);
+      const isLoggedIn = hasSessionUser(auth);
       const pathname = nextUrl.pathname;
 
-      if (isProtectedPath(pathname) && !isLoggedIn) {
+      if (isProtectedApi(pathname) && !isLoggedIn) {
+        return Response.json({ error: "Unauthorized." }, { status: 401 });
+      }
+
+      if (isProtectedPage(pathname) && !isLoggedIn) {
         const loginUrl = new URL("/login", nextUrl.origin);
         loginUrl.searchParams.set(
           "callbackUrl",

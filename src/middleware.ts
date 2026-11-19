@@ -14,6 +14,10 @@ export const config = {
     "/targeting/:path*",
     "/prospects",
     "/prospects/:path*",
+    "/leads",
+    "/leads/:path*",
+    "/outreach",
+    "/outreach/:path*",
     "/approval",
     "/approval/:path*",
     "/history",
@@ -22,5 +26,6 @@ export const config = {
     "/settings/:path*",
     "/login",
     "/register",
+    "/api/v1/:path*",
   ],
 };

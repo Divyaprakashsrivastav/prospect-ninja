@@ -19,7 +19,10 @@ export function RegisterForm() {
     <div className={styles.page}>
       <Card className={styles.card}>
         <h1 className={styles.title}>Create account</h1>
-        <p className={styles.sub}>Start with a demo LinkedIn provider. No scraping.</p>
+        <p className={styles.sub}>
+          Prospect Ninja starts with a labelled demo LinkedIn provider. No
+          scraping.
+        </p>
         {state?.error ? <p className={styles.error}>{state.error}</p> : null}
         <form action={action}>
           <Field label="Name">

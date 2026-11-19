@@ -27,7 +27,9 @@ export function LoginForm({
     <div className={styles.page}>
       <Card className={styles.card}>
         <h1 className={styles.title}>Sign in</h1>
-        <p className={styles.sub}>Human-approved LinkedIn outreach workspace.</p>
+        <p className={styles.sub}>
+          Prospect Ninja — human-approved LinkedIn outreach workspace.
+        </p>
         {error ? <p className={styles.error}>{error}</p> : null}
         <form action={action}>
           {callbackUrl ? (
