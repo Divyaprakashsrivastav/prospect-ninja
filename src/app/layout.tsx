@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Outreach Studio",
+  title: "Prospect Ninja",
   description:
     "AI-assisted LinkedIn prospecting with human-approved outreach.",
 };

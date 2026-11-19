@@ -5,6 +5,7 @@ import { Button } from "@/components/Button";
 import { CampaignActions } from "@/components/CampaignActions";
 import { Card } from "@/components/Card";
 import { EmptyState } from "@/components/EmptyState";
+import { IconMegaphone, IconPlus } from "@/components/icons";
 import { PageHeader } from "@/components/PageHeader";
 import tableStyles from "@/components/CampaignTable.module.css";
 import { formatDateShort } from "@/lib/dates";
@@ -28,7 +29,10 @@ export default async function TargetingPage({
         description="Each active campaign can discover up to 15 relevant prospects per day."
         actions={
           <Link href="/targeting/new">
-            <Button>New campaign</Button>
+            <Button>
+              <IconPlus size={16} />
+              New campaign
+            </Button>
           </Link>
         }
       />
@@ -39,6 +43,7 @@ export default async function TargetingPage({
       <Card>
         {campaigns.length === 0 ? (
           <EmptyState
+            icon={<IconMegaphone size={22} />}
             title="No campaigns yet"
             description="Create an Ideal Customer Profile to start discovering 15 prospects per day."
             action={

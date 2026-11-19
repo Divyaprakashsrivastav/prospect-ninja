@@ -7,7 +7,9 @@ const protectedPrefixes = [
   "/dashboard",
   "/targeting",
   "/prospects",
+  "/studio",
   "/approval",
+  "/analytics",
   "/history",
   "/settings",
 ];

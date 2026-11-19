@@ -3,6 +3,7 @@ import { Badge } from "@/components/Badge";
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
 import { EmptyState } from "@/components/EmptyState";
+import { IconClipboardCheck } from "@/components/icons";
 import { PageHeader } from "@/components/PageHeader";
 import { requireUser } from "@/lib/session";
 import { listApprovalQueue } from "@/modules/outreach/service";
@@ -16,16 +17,22 @@ export default async function ApprovalPage() {
       <PageHeader
         kicker="Human review"
         title="Approval queue"
-        description="Nothing is sent until you explicitly approve the current draft."
+        description="Nothing is sent until you explicitly approve the current draft in Prospect Ninja."
+        actions={
+          <Link href="/studio">
+            <Button variant="secondary">Open AI Message Studio</Button>
+          </Link>
+        }
       />
       <Card>
         {messages.length === 0 ? (
           <EmptyState
+            icon={<IconClipboardCheck size={22} />}
             title="Queue is empty"
-            description="Discover prospects to generate drafts for review."
+            description="Discover prospects and generate drafts to review them here before any send attempt."
             action={
               <Link href="/targeting">
-                <Button>Open targeting</Button>
+                <Button>Open campaigns</Button>
               </Link>
             }
           />
@@ -39,6 +46,8 @@ export default async function ApprovalPage() {
                 display: "flex",
                 justifyContent: "space-between",
                 gap: 12,
+                flexWrap: "wrap",
+                alignItems: "center",
               }}
             >
               <div>
@@ -49,7 +58,9 @@ export default async function ApprovalPage() {
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                 <Badge status={message.status} />
-                <Link href={`/approval/${message.id}`}>Review</Link>
+                <Link href={`/approval/${message.id}`}>
+                  <Button variant="secondary">Review</Button>
+                </Link>
               </div>
             </div>
           ))

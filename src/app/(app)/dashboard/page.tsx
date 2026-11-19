@@ -1,116 +1,103 @@
 import Link from "next/link";
-import { Badge } from "@/components/Badge";
 import { Banner } from "@/components/Banner";
 import { Button } from "@/components/Button";
-import { Card } from "@/components/Card";
-import { EmptyState } from "@/components/EmptyState";
+import { ActivityFeed } from "@/components/dashboard/ActivityFeed";
+import { AnalyticsCharts } from "@/components/dashboard/Charts";
+import { CampaignOverview } from "@/components/dashboard/CampaignOverview";
+import { KpiGrid } from "@/components/dashboard/KpiGrid";
+import { IconCalendar, IconPlus } from "@/components/icons";
 import { PageHeader } from "@/components/PageHeader";
-import styles from "@/components/StatGrid.module.css";
+import { isPrismaUnavailable } from "@/lib/db";
 import { requireUser } from "@/lib/session";
-import { getDashboardStats } from "@/modules/analytics/service";
-import { listCampaigns } from "@/modules/campaigns/service";
+import {
+  getAnalyticsSeries,
+  getCampaignPerformance,
+  getDashboardStats,
+  listRecentActivity,
+} from "@/modules/analytics/service";
 import { listConnections } from "@/modules/integrations/service";
+import styles from "./dashboard.module.css";
 
 export default async function DashboardPage() {
   const user = await requireUser();
-  const [stats, campaigns, connections] = await Promise.all([
-    getDashboardStats(user.id),
-    listCampaigns(user.id),
-    listConnections(user.id),
-  ]);
+
+  let stats: Awaited<ReturnType<typeof getDashboardStats>> | null = null;
+  let series: Awaited<ReturnType<typeof getAnalyticsSeries>> | null = null;
+  let campaigns: Awaited<ReturnType<typeof getCampaignPerformance>> = [];
+  let activity: Awaited<ReturnType<typeof listRecentActivity>> = [];
+  let connections: Awaited<ReturnType<typeof listConnections>> = [];
+  let loadError: string | null = null;
+
+  try {
+    [stats, series, campaigns, activity, connections] = await Promise.all([
+      getDashboardStats(user.id),
+      getAnalyticsSeries(user.id, 14),
+      getCampaignPerformance(user.id),
+      listRecentActivity(user.id, 12),
+      listConnections(user.id),
+    ]);
+  } catch (error) {
+    if (isPrismaUnavailable(error)) {
+      loadError =
+        "Database is temporarily unavailable. Dashboard data could not be loaded.";
+    } else {
+      throw error;
+    }
+  }
+
   const demo = connections.find((item) => item.provider === "demo");
+  const todayLabel = new Intl.DateTimeFormat("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  }).format(new Date());
 
   return (
     <>
       <PageHeader
-        kicker="Overview"
-        title={`Welcome, ${user.name}`}
-        description="Discover prospects, draft outreach, and send only after you approve."
+        kicker="Dashboard"
+        title={`Welcome back, ${user.name}`}
+        description="Prospect Ninja helps you discover LinkedIn prospects, generate AI outreach, and send only after human approval."
+        meta={
+          <span className={styles.dateMeta}>
+            <IconCalendar size={14} />
+            {todayLabel}
+          </span>
+        }
         actions={
           <Link href="/targeting/new">
-            <Button>Create campaign</Button>
+            <Button>
+              <IconPlus size={16} />
+              Create campaign
+            </Button>
           </Link>
         }
       />
+
+      {loadError ? <Banner tone="error">{loadError}</Banner> : null}
       {demo ? (
         <Banner tone="warn">
           LinkedIn connection is the labelled demo provider. Sample prospects
-          only — messages are never actually sent.
+          only — messages are never actually sent on LinkedIn.
         </Banner>
       ) : null}
-      <div className={styles.grid}>
-        {[
-          ["Campaigns", stats.campaignCount],
-          ["Prospects", stats.prospectCount],
-          ["Discovered today", stats.discoveredToday],
-          ["Pending approval", stats.pendingApproval],
-          ["Approved", stats.approved],
-          ["Demo recorded", stats.demoRecorded],
-          ["Sent", stats.sent],
-          ["Failed", stats.failed],
-        ].map(([label, value]) => (
-          <div className={styles.stat} key={String(label)}>
-            <div className={styles.label}>{label}</div>
-            <div className={styles.value}>{value}</div>
-          </div>
-        ))}
+
+      <KpiGrid stats={stats} />
+
+      <div className={styles.sectionHead}>
+        <h2>Analytics</h2>
+        <p>Trends from your real workspace data over the last 14 days</p>
       </div>
-      <Card>
-        {campaigns.length === 0 ? (
-          <EmptyState
-            title="No campaigns yet"
-            description="Create an Ideal Customer Profile to start daily discovery (max 15 new prospects per campaign per day)."
-            action={
-              <Link href="/targeting/new">
-                <Button>Create campaign</Button>
-              </Link>
-            }
-          />
-        ) : (
-          <div>
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                gap: 12,
-                marginBottom: 12,
-                alignItems: "center",
-              }}
-            >
-              <h2>Your campaigns</h2>
-              <Link href="/targeting" style={{ color: "var(--brand)", fontWeight: 600 }}>
-                Manage all
-              </Link>
-            </div>
-            {campaigns.map((campaign) => (
-              <div
-                key={campaign.id}
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  gap: 12,
-                  padding: "10px 0",
-                  borderTop: "1px solid var(--border)",
-                }}
-              >
-                <div>
-                  <Link href={`/targeting/${campaign.id}`}>
-                    <strong>{campaign.name}</strong>
-                  </Link>
-                  <div style={{ color: "var(--muted)", fontSize: 13 }}>
-                    {campaign.icp.jobTitles.slice(0, 3).join(", ") || "No titles"}
-                    {" · "}
-                    {campaign.prospectCount} prospects
-                    {" · "}
-                    {campaign.pendingApprovals} pending
-                  </div>
-                </div>
-                <Badge status={campaign.isActive ? "active" : "paused"} />
-              </div>
-            ))}
-          </div>
-        )}
-      </Card>
+      {series ? (
+        <AnalyticsCharts series={series} />
+      ) : (
+        <Banner tone="warn">Analytics unavailable while the database is down.</Banner>
+      )}
+
+      <CampaignOverview campaigns={campaigns} loadError={loadError} />
+
+      <ActivityFeed items={activity} />
     </>
   );
 }
