@@ -16,7 +16,10 @@
     "job:discover": "tsx src/jobs/runDiscover.ts",
     "test:campaigns": "node scripts/run-with-env.js npx tsx scripts/test-campaigns.ts",
     "test:discovery": "node scripts/run-with-env.js npx tsx scripts/test-discovery.ts",
-    "test:messages": "node scripts/run-with-env.js npx tsx scripts/test-messages.ts"
+    "test:messages": "node scripts/run-with-env.js npx tsx scripts/test-messages.ts",
+    "test:foundation": "node scripts/run-with-env.js npx tsx scripts/test-foundation.ts",
+    "test:leads": "node scripts/run-with-env.js npx tsx scripts/test-leads.ts",
+    "test:lead-outreach": "node scripts/run-with-env.js npx tsx scripts/test-lead-outreach.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",

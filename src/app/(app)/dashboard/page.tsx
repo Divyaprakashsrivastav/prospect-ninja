@@ -7,7 +7,10 @@ import { CampaignOverview } from "@/components/dashboard/CampaignOverview";
 import { KpiGrid } from "@/components/dashboard/KpiGrid";
 import { IconCalendar, IconPlus } from "@/components/icons";
 import { PageHeader } from "@/components/PageHeader";
-import { isPrismaUnavailable } from "@/lib/db";
+import {
+  DATABASE_UNREACHABLE_MESSAGE,
+  isPrismaUnavailable,
+} from "@/lib/db-errors";
 import { requireUser } from "@/lib/session";
 import {
   getAnalyticsSeries,
@@ -38,8 +41,7 @@ export default async function DashboardPage() {
     ]);
   } catch (error) {
     if (isPrismaUnavailable(error)) {
-      loadError =
-        "Database is temporarily unavailable. Dashboard data could not be loaded.";
+      loadError = DATABASE_UNREACHABLE_MESSAGE;
     } else {
       throw error;
     }

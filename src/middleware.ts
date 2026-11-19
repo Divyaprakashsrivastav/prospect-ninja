@@ -16,6 +16,10 @@ export const config = {
     "/prospects/:path*",
     "/studio",
     "/studio/:path*",
+    "/leads",
+    "/leads/:path*",
+    "/outreach",
+    "/outreach/:path*",
     "/approval",
     "/approval/:path*",
     "/analytics",
@@ -26,5 +30,6 @@ export const config = {
     "/settings/:path*",
     "/login",
     "/register",
+    "/api/v1/:path*",
   ],
 };

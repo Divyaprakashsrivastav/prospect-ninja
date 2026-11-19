@@ -56,3 +56,26 @@
   background: #eff6ff;
   color: var(--info);
 }
+
+.new,
+.contacted,
+.interested {
+  background: #eff6ff;
+  color: var(--info);
+}
+
+.qualified,
+.converted {
+  background: #ecfdf5;
+  color: var(--success);
+}
+
+.not_interested {
+  background: #f1f5f9;
+  color: var(--muted);
+}
+
+.replied {
+  background: #ecfdf5;
+  color: var(--success);
+}

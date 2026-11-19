@@ -299,3 +299,71 @@ export async function listRecentActivity(userId: string, limit = 24) {
 }
 
 export type ActivityItem = Awaited<ReturnType<typeof listRecentActivity>>[number];
+
+export type DashboardActivityItem = {
+  id: string;
+  action: string;
+  createdAt: Date;
+  prospectName: string;
+  campaignName: string;
+  messageStatus: string;
+};
+
+/** Recent audit events for this user only — never fabricated. */
+export async function getRecentActivity(
+  userId: string,
+  limit = 8,
+): Promise<DashboardActivityItem[]> {
+  const events = await prisma.messageAuditEvent.findMany({
+    where: {
+      actorUserId: userId,
+      message: { campaign: { userId } },
+    },
+    orderBy: { createdAt: "desc" },
+    take: Math.min(Math.max(limit, 1), 20),
+    select: {
+      id: true,
+      action: true,
+      createdAt: true,
+      message: {
+        select: {
+          status: true,
+          prospect: { select: { fullName: true } },
+          campaign: { select: { name: true } },
+        },
+      },
+    },
+  });
+
+  return events.map((event) => ({
+    id: event.id,
+    action: event.action,
+    createdAt: event.createdAt,
+    prospectName: event.message.prospect.fullName,
+    campaignName: event.message.campaign.name,
+    messageStatus: event.message.status,
+  }));
+}
+
+export function formatActivityAction(action: string): string {
+  switch (action) {
+    case "generated":
+      return "Draft generated";
+    case "edited":
+      return "Draft edited";
+    case "approved":
+      return "Approved";
+    case "rejected":
+      return "Rejected";
+    case "send_attempted":
+      return "Send attempted";
+    case "send_succeeded":
+      return "Sent";
+    case "send_failed":
+      return "Send failed";
+    case "demo_send":
+      return "Demo recorded (not sent on LinkedIn)";
+    default:
+      return action.replaceAll("_", " ");
+  }
+}
