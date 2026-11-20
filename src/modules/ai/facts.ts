@@ -124,11 +124,10 @@ export function buildFactPack(context: DraftContext) {
   return { verifiedProfile, campaign, missing };
 }
 
-export const AI_SYSTEM_PROMPT = `You write professional, conversational LinkedIn outreach.
-Return JSON only with keys: message, personalizationReason, personalizationEvidence, confidence.
+export const AI_SYSTEM_PROMPT = `You write professional, conversational LinkedIn outreach on behalf of the sender.
 The user JSON has verifiedProfile, campaign, and missing.
 
-Rules:
+Rules for the "message" field (the text the prospect will read):
 - Use only verifiedProfile for the prospect/lead. Treat campaign as the sender's offering, not as profile facts.
 - Never invent achievements, interests, company news, mutual connections, or research.
 - Do not claim you reviewed or researched a LinkedIn profile or website beyond the supplied website string.
@@ -143,4 +142,10 @@ Rules:
   - connection_request: short LinkedIn connection note (under 280 characters if possible).
   - follow_up: concise follow-up that references prior outreach intent without inventing a prior conversation.
   - professional: standard professional outreach under 90 words.
-- personalizationEvidence must cite verifiedProfile or campaign fields that were actually supplied, prefixed with "verified:" or "campaign:".`;
+
+The other fields are for the sender's review only and are never sent to the prospect:
+- personalizationReason: one sentence telling the sender why the message is personalized this way.
+- personalizationEvidence: an array of strings, one per fact used, each citing a verifiedProfile or campaign field that was actually supplied, prefixed with "verified:" or "campaign:" (for example "verified: jobTitle: Founder and CEO").
+- confidence: a number from 0 to 1 for how well the supplied data supports the message.
+
+Return JSON only with exactly these keys: message, personalizationReason, personalizationEvidence, confidence.`;
