@@ -4,6 +4,9 @@ import { AI_SYSTEM_PROMPT, buildFactPack } from "@/modules/ai/facts";
 import { parseAiDraftOutput } from "@/modules/ai/output";
 import type { AiProvider, DraftContext, GeneratedDraft } from "@/modules/ai/types";
 
+// Cap on how much of the raw model output is echoed back in an error.
+const MAX_RAW_IN_ERROR = 3000;
+
 export class OpenAiRateLimitError extends Error {
   constructor() {
     super("OpenAI rate limit reached. Try again in a moment.");
@@ -37,7 +40,19 @@ export class OpenAIProvider implements AiProvider {
       if (!content) {
         throw new Error("OpenAI returned an empty response.");
       }
-      const parsed = parseAiDraftOutput(content);
+      let parsed;
+      try {
+        parsed = parseAiDraftOutput(content);
+      } catch (parseError) {
+        const reason =
+          parseError instanceof Error ? parseError.message : "Invalid AI response.";
+        console.error("[openai] draft rejected:", reason, "\nRaw response:", content);
+        throw new Error(
+          `${reason}\n\nRaw OpenAI response:\n${content.slice(0, MAX_RAW_IN_ERROR)}${
+            content.length > MAX_RAW_IN_ERROR ? "…" : ""
+          }`,
+        );
+      }
       return {
         ...parsed,
         provider: this.id,

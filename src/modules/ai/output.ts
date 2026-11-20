@@ -27,12 +27,21 @@ export const aiDraftOutputSchema = z.object({
 export type AiDraftOutput = z.infer<typeof aiDraftOutputSchema>;
 
 export function parseAiDraftOutput(value: unknown): AiDraftOutput {
+  let candidate = value;
   if (typeof value === "string") {
     try {
-      return aiDraftOutputSchema.parse(JSON.parse(value));
-    } catch {
-      throw new Error("AI response was not valid JSON.");
+      candidate = JSON.parse(value);
+    } catch (error) {
+      const reason = error instanceof Error ? ` (${error.message})` : "";
+      throw new Error(`AI response was not valid JSON${reason}.`);
     }
   }
-  return aiDraftOutputSchema.parse(value);
+  const result = aiDraftOutputSchema.safeParse(candidate);
+  if (!result.success) {
+    const issues = result.error.issues
+      .map((issue) => `${issue.path.join(".") || "(root)"}: ${issue.message}`)
+      .join("; ");
+    throw new Error(`AI response did not match the expected format: ${issues}`);
+  }
+  return result.data;
 }

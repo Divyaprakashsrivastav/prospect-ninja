@@ -57,7 +57,17 @@ export function GenerateMessageButton({
         </p>
       ) : null}
       {error ? (
-        <p style={{ color: "var(--danger)", fontSize: 12, marginTop: 4 }}>
+        <p
+          style={{
+            color: "var(--danger)",
+            fontSize: 12,
+            marginTop: 4,
+            whiteSpace: "pre-wrap",
+            overflowWrap: "anywhere",
+            maxHeight: 320,
+            overflowY: "auto",
+          }}
+        >
           {error}
         </p>
       ) : null}
