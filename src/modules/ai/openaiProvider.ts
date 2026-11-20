@@ -7,6 +7,31 @@ import type { AiProvider, DraftContext, GeneratedDraft } from "@/modules/ai/type
 // Cap on how much of the raw model output is echoed back in an error.
 const MAX_RAW_IN_ERROR = 3000;
 
+const DRAFT_JSON_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  required: [
+    "message",
+    "personalizationReason",
+    "personalizationEvidence",
+    "confidence",
+  ],
+  properties: {
+    message: { type: "string" },
+    personalizationReason: { type: "string" },
+    personalizationEvidence: {
+      type: "array",
+      items: { type: "string" },
+      description:
+        'Each item cites one supplied field, prefixed "verified:" or "campaign:".',
+    },
+    confidence: {
+      type: "number",
+      description: "Number from 0 to 1.",
+    },
+  },
+};
+
 export class OpenAiRateLimitError extends Error {
   constructor() {
     super("OpenAI rate limit reached. Try again in a moment.");
@@ -30,7 +55,16 @@ export class OpenAIProvider implements AiProvider {
       const completion = await client.chat.completions.create({
         model: this.model,
         temperature: 0.4,
-        response_format: { type: "json_object" },
+        // Structured outputs: OpenAI must return exactly these fields and
+        // types (JSON mode alone only guarantees syntactically valid JSON).
+        response_format: {
+          type: "json_schema",
+          json_schema: {
+            name: "outreach_draft",
+            strict: true,
+            schema: DRAFT_JSON_SCHEMA,
+          },
+        },
         messages: [
           { role: "system", content: AI_SYSTEM_PROMPT },
           { role: "user", content: JSON.stringify(facts) },
