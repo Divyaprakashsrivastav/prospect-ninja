@@ -32,15 +32,6 @@ export async function getDashboardStats(userId: string) {
   const [
     campaignCount,
     prospectCount,
-<<<<<<< HEAD
-    pendingApproval,
-    approved,
-    demoRecorded,
-    sent,
-    invitationsSent,
-    failed,
-=======
->>>>>>> upstream/main
     discoveredToday,
     discoveredYesterday,
     aiMessagesGenerated,
@@ -48,30 +39,6 @@ export async function getDashboardStats(userId: string) {
   ] = await Promise.all([
     prisma.campaign.count({ where: { userId } }),
     prisma.prospect.count({ where: { userId } }),
-<<<<<<< HEAD
-    prisma.outreachMessage.count({
-      where: {
-        campaign: { userId },
-        status: MESSAGE_STATUS.pendingReview,
-      },
-    }),
-    prisma.outreachMessage.count({
-      where: { campaign: { userId }, status: MESSAGE_STATUS.approved },
-    }),
-    prisma.outreachMessage.count({
-      where: { campaign: { userId }, status: MESSAGE_STATUS.demoRecorded },
-    }),
-    prisma.outreachMessage.count({
-      where: { campaign: { userId }, status: MESSAGE_STATUS.sent },
-    }),
-    prisma.outreachMessage.count({
-      where: { campaign: { userId }, status: MESSAGE_STATUS.invitationSent },
-    }),
-    prisma.outreachMessage.count({
-      where: { campaign: { userId }, status: MESSAGE_STATUS.failed },
-    }),
-=======
->>>>>>> upstream/main
     prisma.prospect.count({
       where: { userId, discoveredAt: { gte: today } },
     }),
@@ -103,20 +70,12 @@ export async function getDashboardStats(userId: string) {
   return {
     campaignCount,
     prospectCount,
-<<<<<<< HEAD
-    pendingApproval,
-    approved,
-    demoRecorded,
-    sent,
-    invitationsSent,
-    failed,
-=======
     pendingApproval: byStatus[MESSAGE_STATUS.pendingReview] ?? 0,
     approved: byStatus[MESSAGE_STATUS.approved] ?? 0,
     demoRecorded: byStatus[MESSAGE_STATUS.demoRecorded] ?? 0,
     sent: byStatus[MESSAGE_STATUS.sent] ?? 0,
+    invitationsSent: byStatus[MESSAGE_STATUS.invitationSent] ?? 0,
     failed: byStatus[MESSAGE_STATUS.failed] ?? 0,
->>>>>>> upstream/main
     discoveredToday,
     discoveredYesterday,
     aiMessagesGenerated,
