@@ -1,6 +1,6 @@
-# Outreach Studio
+# Prospect Ninja
 
-AI-assisted LinkedIn prospecting with a human-approved send workflow. Inspired by products like HeyReach, but messages never leave the queue until a person approves the exact draft.
+AI-assisted LinkedIn prospecting with a human-approved send workflow (formerly Outreach Studio in early MVP branding). Inspired by products like HeyReach, but messages never leave the queue until a person approves the exact draft.
 
 This MVP does **not** scrape LinkedIn, automate a browser, or collect LinkedIn passwords. Discovery and send go through a provider adapter. Until you supply an official API (for example HeyReach), the app uses a labelled **demo provider** with sample data. Demo send attempts are stored as `demo_recorded` and are never shown as real LinkedIn deliveries.
 

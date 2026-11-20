@@ -1,0 +1,19 @@
+.dateMeta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sectionHead {
+  margin: 4px 0 12px;
+}
+
+.sectionHead h2 {
+  font-size: 1.05rem;
+}
+
+.sectionHead p {
+  color: var(--muted);
+  font-size: 13px;
+  margin-top: 4px;
+}

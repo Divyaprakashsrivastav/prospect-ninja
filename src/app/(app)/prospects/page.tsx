@@ -4,6 +4,7 @@ import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
 import { EmptyState } from "@/components/EmptyState";
 import { Field, TextInput } from "@/components/Field";
+import { IconUsers } from "@/components/icons";
 import { PageHeader } from "@/components/PageHeader";
 import { Badge } from "@/components/Badge";
 import { BulkGenerateButton } from "@/components/BulkGenerateButton";
@@ -139,7 +140,8 @@ export default async function ProspectsPage({
         </div>
         {listed.prospects.length === 0 ? (
           <EmptyState
-            title="No prospects stored"
+            icon={<IconUsers size={22} />}
+            title="No prospects yet"
             description="Select an active campaign and run discovery. Results are saved to PostgreSQL."
             action={
               <Link href="/targeting">

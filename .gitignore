@@ -44,3 +44,4 @@ next-env.d.ts
 
 # local PostgreSQL data
 /data
+.env*
