@@ -45,16 +45,14 @@ async function signInAndRedirect(
     }
     throw error;
   }
-<<<<<<< HEAD
-  redirect(redirectTo);
-=======
   const rawCallback = String(formData.get("callbackUrl") ?? "").trim();
   const callbackPath =
-    rawCallback.startsWith("/") && !rawCallback.startsWith("//")
+    redirectTo === "/dashboard" &&
+    rawCallback.startsWith("/") &&
+    !rawCallback.startsWith("//")
       ? rawCallback
-      : "/dashboard";
+      : redirectTo;
   redirect(callbackPath);
->>>>>>> upstream/main
 }
 
 export async function registerAction(formData: FormData) {

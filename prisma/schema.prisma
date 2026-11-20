@@ -62,32 +62,6 @@ model IntegrationConnection {
 }
 
 model Prospect {
-<<<<<<< HEAD
-  id                 String   @id @default(cuid())
-  userId             String
-  campaignId         String
-  campaign           Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
-  provider           String
-  externalId         String
-  linkedinUrl        String
-  fullName           String
-  firstName          String   @default("")
-  lastName           String   @default("")
-  headline           String?
-  jobTitle           String?
-  companyName        String?
-  companySize        String?
-  location           String?
-  industry           String?
-  summary            String?
-  /// LinkedIn member id resolved through Unipile, cached after the first lookup.
-  linkedinProviderId String?
-  matchScore         Int      @default(0)
-  matchReasons       Json
-  isDemo             Boolean  @default(true)
-  rawProfile         Json
-  discoveredAt       DateTime @default(now())
-=======
   id           String   @id @default(cuid())
   userId       String
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -106,12 +80,13 @@ model Prospect {
   location     String?
   industry     String?
   summary      String?
+  /// LinkedIn member id resolved through Unipile, cached after the first lookup.
+  linkedinProviderId String?
   matchScore   Int      @default(0)
   matchReasons Json
   isDemo       Boolean  @default(true)
   rawProfile   Json
   discoveredAt DateTime @default(now())
->>>>>>> upstream/main
 
   messages OutreachMessage[]
 

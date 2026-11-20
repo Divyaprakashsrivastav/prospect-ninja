@@ -17,16 +17,13 @@
     "test:campaigns": "node scripts/run-with-env.js npx tsx scripts/test-campaigns.ts",
     "test:discovery": "node scripts/run-with-env.js npx tsx scripts/test-discovery.ts",
     "test:messages": "node scripts/run-with-env.js npx tsx scripts/test-messages.ts",
-<<<<<<< HEAD
     "test:rocketreach": "tsx scripts/test-rocketreach.ts",
     "check:rocketreach": "node scripts/run-with-env.js npx tsx scripts/check-rocketreach.ts",
     "check:unipile": "node scripts/run-with-env.js npx tsx scripts/check-unipile.ts",
-    "link:unipile": "node scripts/run-with-env.js npx tsx scripts/link-unipile.ts"
-=======
+    "link:unipile": "node scripts/run-with-env.js npx tsx scripts/link-unipile.ts",
     "test:foundation": "node scripts/run-with-env.js npx tsx scripts/test-foundation.ts",
     "test:leads": "node scripts/run-with-env.js npx tsx scripts/test-leads.ts",
     "test:lead-outreach": "node scripts/run-with-env.js npx tsx scripts/test-lead-outreach.ts"
->>>>>>> upstream/main
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",

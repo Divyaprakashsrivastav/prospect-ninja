@@ -12,26 +12,16 @@ import {
   isPrismaUnavailable,
 } from "@/lib/db-errors";
 import { requireUser } from "@/lib/session";
-<<<<<<< HEAD
-import { getDashboardStats } from "@/modules/analytics/service";
-import { listCampaigns } from "@/modules/campaigns/service";
-import { getLinkedInConnection } from "@/modules/integrations/service";
-
-export default async function DashboardPage() {
-  const user = await requireUser();
-  const [stats, campaigns, linkedin] = await Promise.all([
-    getDashboardStats(user.id),
-    listCampaigns(user.id),
-    getLinkedInConnection(user.id),
-  ]);
-=======
 import {
   getAnalyticsSeries,
   getCampaignPerformance,
   getDashboardStats,
   listRecentActivity,
 } from "@/modules/analytics/service";
-import { listConnections } from "@/modules/integrations/service";
+import {
+  getLinkedInConnection,
+  listConnections,
+} from "@/modules/integrations/service";
 import styles from "./dashboard.module.css";
 
 export default async function DashboardPage() {
@@ -42,16 +32,20 @@ export default async function DashboardPage() {
   let campaigns: Awaited<ReturnType<typeof getCampaignPerformance>> = [];
   let activity: Awaited<ReturnType<typeof listRecentActivity>> = [];
   let connections: Awaited<ReturnType<typeof listConnections>> = [];
+  let linkedin: Awaited<ReturnType<typeof getLinkedInConnection>> | null =
+    null;
   let loadError: string | null = null;
 
   try {
-    [stats, series, campaigns, activity, connections] = await Promise.all([
+    [stats, series, campaigns, activity, connections, linkedin] =
+      await Promise.all([
       getDashboardStats(user.id),
       getAnalyticsSeries(user.id, 14),
       getCampaignPerformance(user.id),
       listRecentActivity(user.id, 12),
       listConnections(user.id),
-    ]);
+        getLinkedInConnection(user.id),
+      ]);
   } catch (error) {
     if (isPrismaUnavailable(error)) {
       loadError = DATABASE_UNREACHABLE_MESSAGE;
@@ -67,7 +61,6 @@ export default async function DashboardPage() {
     day: "numeric",
     year: "numeric",
   }).format(new Date());
->>>>>>> upstream/main
 
   return (
     <>
@@ -90,36 +83,6 @@ export default async function DashboardPage() {
           </Link>
         }
       />
-<<<<<<< HEAD
-      {linkedin.live ? null : linkedin.status === "needs_reconnect" ? (
-        <Banner tone="warn">
-          Your LinkedIn session expired, so sends are paused.{" "}
-          <Link href="/connect-linkedin">Reconnect LinkedIn</Link>
-        </Banner>
-      ) : (
-        <Banner tone="warn">
-          LinkedIn isn&apos;t linked, so sends are simulated and nothing is
-          delivered. <Link href="/connect-linkedin">Connect LinkedIn</Link>
-        </Banner>
-      )}
-      <div className={styles.grid}>
-        {[
-          ["Campaigns", stats.campaignCount],
-          ["Prospects", stats.prospectCount],
-          ["Discovered today", stats.discoveredToday],
-          ["Pending approval", stats.pendingApproval],
-          ["Approved", stats.approved],
-          ["Demo recorded", stats.demoRecorded],
-          ["Sent", stats.sent],
-          ["Invitations sent", stats.invitationsSent],
-          ["Failed", stats.failed],
-        ].map(([label, value]) => (
-          <div className={styles.stat} key={String(label)}>
-            <div className={styles.label}>{label}</div>
-            <div className={styles.value}>{value}</div>
-          </div>
-        ))}
-=======
 
       {loadError ? <Banner tone="error">{loadError}</Banner> : null}
       {demo ? (
@@ -129,12 +92,23 @@ export default async function DashboardPage() {
         </Banner>
       ) : null}
 
+      {!linkedin || linkedin.live ? null : linkedin.status === "needs_reconnect" ? (
+        <Banner tone="warn">
+          Your LinkedIn session expired, so sends are paused.{" "}
+          <Link href="/connect-linkedin">Reconnect LinkedIn</Link>
+        </Banner>
+      ) : !demo ? (
+        <Banner tone="warn">
+          LinkedIn isn&apos;t linked, so sends are simulated and nothing is
+          delivered. <Link href="/connect-linkedin">Connect LinkedIn</Link>
+        </Banner>
+      ) : null}
+
       <KpiGrid stats={stats} />
 
       <div className={styles.sectionHead}>
         <h2>Analytics</h2>
         <p>Trends from your real workspace data over the last 14 days</p>
->>>>>>> upstream/main
       </div>
       {series ? (
         <AnalyticsCharts series={series} />
