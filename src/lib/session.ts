@@ -1,34 +1,65 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
-import { withDatabaseFallback } from "@/lib/db";
+import { isPrismaUnavailable, prisma } from "@/lib/db";
 
-async function loadExistingUser() {
-  const session = await auth();
+function sessionUserId(
+  session: { user?: { id?: string | null } } | null,
+): string | null {
   const id = session?.user?.id;
-  if (!id || typeof id !== "string") {
-    return { session, user: null as null };
+  if (typeof id !== "string" || id.trim().length === 0) {
+    return null;
   }
-  const user = await withDatabaseFallback((client) =>
-    client.user.findUnique({
-      where: { id },
-      select: { id: true, email: true, name: true },
-    }),
-  );
-  return { session, user };
+  return id;
 }
 
 export async function requireUser() {
-  const { session, user } = await loadExistingUser();
-  if (session?.user && !user) {
-    redirect("/api/auth/stale-session");
-  }
-  if (!user) {
+  const session = await auth();
+  const id = sessionUserId(session);
+  if (!id) {
     redirect("/login");
   }
-  return user;
+
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id },
+      select: { id: true, email: true, name: true },
+    });
+    if (!user) {
+      // JWT still present but account was removed — clear the session.
+      redirect("/api/auth/logout");
+    }
+    return user;
+  } catch (error) {
+    if (isPrismaUnavailable(error)) {
+      return {
+        id,
+        email: session?.user?.email ?? "",
+        name: session?.user?.name ?? "",
+      };
+    }
+    throw error;
+  }
 }
 
 export async function getApiUser() {
-  const { user } = await loadExistingUser();
-  return user;
+  const session = await auth();
+  const id = sessionUserId(session);
+  if (!id) {
+    return null;
+  }
+  try {
+    return await prisma.user.findUnique({
+      where: { id },
+      select: { id: true, email: true, name: true },
+    });
+  } catch (error) {
+    if (isPrismaUnavailable(error)) {
+      return {
+        id,
+        email: session?.user?.email ?? "",
+        name: session?.user?.name ?? "",
+      };
+    }
+    throw error;
+  }
 }

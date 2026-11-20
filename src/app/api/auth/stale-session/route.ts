@@ -1,5 +1,5 @@
-import { signOut } from "@/auth";
+import { NextResponse } from "next/server";
 
-export async function GET() {
-  await signOut({ redirectTo: "/login" });
+export async function GET(request: Request) {
+  return NextResponse.redirect(new URL("/api/auth/logout", request.url), 307);
 }

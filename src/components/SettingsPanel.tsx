@@ -2,7 +2,6 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { logoutAction } from "@/app/actions/auth";
 import { Banner } from "@/components/Banner";
 import { Button } from "@/components/Button";
 
@@ -71,7 +70,7 @@ export function SettingsPanel({ connections }: { connections: Connection[] }) {
           </Button>
         </div>
       ))}
-      <form action={logoutAction} style={{ marginTop: 20 }}>
+      <form action="/api/auth/logout" method="post" style={{ marginTop: 20 }}>
         <Button type="submit" variant="ghost">
           Sign out
         </Button>

@@ -16,9 +16,13 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  campaigns   Campaign[]
-  connections IntegrationConnection[]
-  auditEvents MessageAuditEvent[]
+  campaigns          Campaign[]
+  connections        IntegrationConnection[]
+  prospects          Prospect[]
+  leads              Lead[]
+  leadOutreaches     LeadOutreach[]
+  leadOutreachEvents LeadOutreachEvent[]
+  auditEvents        MessageAuditEvent[]
 }
 
 model Campaign {
@@ -58,6 +62,7 @@ model IntegrationConnection {
 }
 
 model Prospect {
+<<<<<<< HEAD
   id                 String   @id @default(cuid())
   userId             String
   campaignId         String
@@ -82,6 +87,31 @@ model Prospect {
   isDemo             Boolean  @default(true)
   rawProfile         Json
   discoveredAt       DateTime @default(now())
+=======
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  campaignId   String
+  campaign     Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  provider     String
+  externalId   String
+  linkedinUrl  String
+  fullName     String
+  firstName    String   @default("")
+  lastName     String   @default("")
+  headline     String?
+  jobTitle     String?
+  companyName  String?
+  companySize  String?
+  location     String?
+  industry     String?
+  summary      String?
+  matchScore   Int      @default(0)
+  matchReasons Json
+  isDemo       Boolean  @default(true)
+  rawProfile   Json
+  discoveredAt DateTime @default(now())
+>>>>>>> upstream/main
 
   messages OutreachMessage[]
 
@@ -132,6 +162,85 @@ model OutreachMessage {
   @@index([status])
 }
 
+model Lead {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  firstName    String
+  lastName     String
+  jobTitle     String   @default("")
+  company      String   @default("")
+  email        String?
+  phone        String?
+  linkedinUrl  String?
+  website      String?
+  industry     String   @default("")
+  location     String   @default("")
+  companySize  String   @default("")
+  source       String   @default("manual")
+  status       String   @default("new")
+  notes        String   @default("")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([userId])
+  @@index([userId, status])
+  @@index([userId, industry])
+  @@index([userId, company])
+  @@index([userId, createdAt])
+  @@index([userId, email])
+  @@index([userId, linkedinUrl])
+
+  outreaches LeadOutreach[]
+}
+
+/// AI outreach drafts for CRM leads (separate from campaign Prospect messages).
+/// One active record per lead + message type. History lives in LeadOutreachEvent.
+model LeadOutreach {
+  id                      String    @id @default(cuid())
+  userId                  String
+  user                    User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  leadId                  String
+  lead                    Lead      @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  messageType             String
+  status                  String    @default("draft")
+  body                    String
+  originalBody            String?
+  campaignContext         String    @default("")
+  personalizationReason   String?
+  personalizationEvidence Json?
+  aiProvider              String?
+  aiModel                 String?
+  generationStatus        String    @default("pending")
+  confidence              Float?
+  approvedAt              DateTime?
+  approvedBodyHash        String?
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
+
+  events LeadOutreachEvent[]
+
+  @@unique([leadId, messageType])
+  @@index([userId])
+  @@index([leadId])
+  @@index([userId, status])
+}
+
+model LeadOutreachEvent {
+  id           String       @id @default(cuid())
+  outreachId   String
+  outreach     LeadOutreach @relation(fields: [outreachId], references: [id], onDelete: Cascade)
+  actorUserId  String
+  actor        User         @relation(fields: [actorUserId], references: [id])
+  action       String
+  bodySnapshot String
+  metadata     Json?
+  createdAt    DateTime     @default(now())
+
+  @@index([outreachId])
+  @@index([actorUserId])
+}
+
 model MessageAuditEvent {
   id           String          @id @default(cuid())
   messageId    String
@@ -144,4 +253,5 @@ model MessageAuditEvent {
   createdAt    DateTime        @default(now())
 
   @@index([messageId])
+  @@index([actorUserId])
 }

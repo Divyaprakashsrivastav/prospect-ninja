@@ -3,10 +3,22 @@
   display: grid;
   place-items: center;
   padding: 24px;
+  background:
+    radial-gradient(900px 320px at 10% -10%, rgba(37, 99, 235, 0.1), transparent 55%),
+    var(--bg);
 }
 
 .card {
   width: min(420px, 100%);
+}
+
+.brand {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--brand);
+  margin-bottom: 10px;
 }
 
 .title {

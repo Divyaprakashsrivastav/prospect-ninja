@@ -1,5 +1,10 @@
 import type { AiDraftOutput } from "@/modules/ai/output";
 
+export type OutreachMessageType =
+  | "connection_request"
+  | "follow_up"
+  | "professional";
+
 export type DraftContext = {
   senderName?: string | null;
   firstName?: string | null;
@@ -12,8 +17,11 @@ export type DraftContext = {
   location?: string | null;
   industry?: string | null;
   summary?: string | null;
+  website?: string | null;
   campaignName: string;
   campaignDescription?: string | null;
+  campaignContext?: string | null;
+  messageType?: OutreachMessageType;
   icpTitles: string[];
   icpIndustries: string[];
   icpLocations: string[];

@@ -3,8 +3,11 @@ import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { authConfig } from "@/auth.config";
+import { ensureAuthUrlEnv } from "@/lib/auth-env";
 import { prisma } from "@/lib/db";
 import { consumeRateLimit } from "@/lib/rateLimit";
+
+ensureAuthUrlEnv();
 
 const credentialsSchema = z.object({
   email: z.string().email(),
