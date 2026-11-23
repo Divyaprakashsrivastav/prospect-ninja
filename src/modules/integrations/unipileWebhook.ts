@@ -22,17 +22,32 @@ const MAX_BODY_CHARS = 64 * 1024;
 const REDACTED_HEADERS = new Set(["cookie", "authorization"]);
 
 /**
- * v2 event envelope. `payload` depends on `type`; for `relation.new` it is a
- * UserRelation whose `user.id` is the LinkedIn provider id we store on prospects.
+ * v2 event envelope. `payload` depends on `type`:
+ * - relation.new: UserRelation; `user.id` is the new connection.
+ * - message.new: Message; `sender.id` is the author, `is_sender` is true when
+ *   the linked account itself sent it (then the counterparty isn't in the payload).
+ * In both, the id is the LinkedIn provider id we store on prospects.
  */
 type UnipileWebhookEvent = {
   id?: unknown;
   type?: unknown;
   account_id?: unknown;
   payload?: {
-    user?: { id?: unknown; public_identifier?: unknown };
+    user?: { id?: unknown };
+    sender?: { id?: unknown };
+    is_sender?: unknown;
   } | null;
 };
+
+/** The other LinkedIn member this event is about, if the payload names one. */
+function counterpartyProviderId(event: UnipileWebhookEvent | null): string | null {
+  const payload = event?.payload;
+  const relationUser = str(payload?.user?.id);
+  if (relationUser) {
+    return relationUser;
+  }
+  return payload?.is_sender === false ? str(payload.sender?.id) : null;
+}
 
 function str(value: unknown): string | null {
   return typeof value === "string" && value.trim().length > 0 ? value : null;
@@ -112,7 +127,7 @@ async function resolveOwners(event: UnipileWebhookEvent | null) {
   if (!connection) {
     return { userId: null, prospectId: null };
   }
-  const providerId = str(event?.payload?.user?.id);
+  const providerId = counterpartyProviderId(event);
   const prospect = providerId
     ? await prisma.prospect.findFirst({
         where: { userId: connection.userId, linkedinProviderId: providerId },
