@@ -230,3 +230,31 @@ model MessageAuditEvent {
   @@index([messageId])
   @@index([actorUserId])
 }
+
+/// Every inbound webhook, stored as received (verified or not) for audit and replay.
+/// No foreign keys: events must survive user/prospect deletion.
+model WebhookEvent {
+  id                String   @id @default(cuid())
+  provider          String
+  /// `event` field from the payload (e.g. "new_relation"), when present.
+  event             String?
+  /// Provider account the event belongs to (Unipile account_id).
+  externalAccountId String?
+  /// True when the shared-secret header matched.
+  verified          Boolean
+  /// Parsed JSON body; null when the body was not valid JSON.
+  payload           Json?
+  /// Body exactly as received (truncated past the size cap).
+  rawBody           String
+  /// Request headers, minus the secret and cookies.
+  headers           Json
+  /// Best-effort matches, resolved at receipt time.
+  userId            String?
+  prospectId        String?
+  receivedAt        DateTime @default(now())
+
+  @@index([provider, event])
+  @@index([externalAccountId])
+  @@index([userId])
+  @@index([prospectId])
+}
