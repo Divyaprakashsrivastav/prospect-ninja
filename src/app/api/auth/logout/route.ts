@@ -40,7 +40,20 @@ async function clearSession(request: NextRequest) {
   return response;
 }
 
+function isPrefetch(request: NextRequest): boolean {
+  const h = request.headers;
+  return (
+    h.get("next-router-prefetch") === "1" ||
+    h.get("purpose") === "prefetch" ||
+    h.get("sec-purpose")?.includes("prefetch") === true
+  );
+}
+
 export async function GET(request: NextRequest) {
+  // Never sign out on a prefetch — only on a real navigation.
+  if (isPrefetch(request)) {
+    return new NextResponse(null, { status: 204 });
+  }
   return clearSession(request);
 }
 
