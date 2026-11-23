@@ -167,10 +167,13 @@ export function AppNav({
               <span className={styles.userRole}>Signed in</span>
             </span>
           </div>
-          <Link className={styles.signOut} href="/api/auth/logout" title="Sign out">
-            <IconLogOut size={15} />
-            <span>Sign out</span>
-          </Link>
+          {/* POST form, not <Link>: Link prefetches its href, which would sign the user out. */}
+          <form action="/api/auth/logout" method="post">
+            <button className={styles.signOut} type="submit" title="Sign out">
+              <IconLogOut size={15} />
+              <span>Sign out</span>
+            </button>
+          </form>
         </div>
       </aside>
 

@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
 import {
@@ -26,11 +25,11 @@ export default function AppError({
       </p>
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
         <Button onClick={reset}>Retry</Button>
-        <Link href="/api/auth/logout">
-          <Button type="button" variant="ghost">
+        <form action="/api/auth/logout" method="post">
+          <Button type="submit" variant="ghost">
             Sign out
           </Button>
-        </Link>
+        </form>
       </div>
     </Card>
   );
