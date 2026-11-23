@@ -3,25 +3,29 @@ import { env } from "@/lib/env";
 import { recordUnipileWebhook } from "@/modules/integrations/unipileWebhook";
 
 /**
- * Public endpoint for Unipile webhooks (outside /api/v1, so no session is required).
- * Authenticity: Unipile sends the custom header we registered (Unipile-Auth: <secret>).
- * Every request is recorded in WebhookEvent; only verified ones get a 200.
- * Unipile retries up to 5 times unless it gets a 200 within 30s.
+ * Public endpoint for Unipile v2 webhooks (outside /api/v1, so no session is required).
+ * Authenticity: HMAC signature in the `unipile-signature` header, checked against
+ * UNIPILE_WEBHOOK_SECRET (the endpoint secret from the Unipile dashboard).
+ * UNIPILE_WEBHOOK_VERIFY="false" turns the check off.
+ * Every request is recorded in WebhookEvent; only accepted ones get a 200.
+ * Unipile needs a 2xx within 5s, else it retries after 2s and 12s.
  */
 export async function POST(request: Request) {
-  if (!env.unipileWebhookSecret) {
-    console.warn("[unipile webhook] UNIPILE_WEBHOOK_SECRET is not set; recording as unverified.");
+  if (!env.unipileWebhookVerify) {
+    console.warn("[unipile webhook] UNIPILE_WEBHOOK_VERIFY=false; accepting unsigned webhooks.");
+  } else if (!env.unipileWebhookSecret) {
+    console.warn("[unipile webhook] UNIPILE_WEBHOOK_SECRET is not set; rejecting all webhooks.");
   }
 
   try {
-    const { id, verified } = await recordUnipileWebhook(request);
-    if (!verified) {
-      return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+    const { id, accepted } = await recordUnipileWebhook(request);
+    if (!accepted) {
+      return NextResponse.json({ error: "Invalid signature." }, { status: 401 });
     }
-    return NextResponse.json({ ok: true, id });
+    return NextResponse.json({ received: true, id });
   } catch (error) {
     console.error("[unipile webhook] failed to record", error);
-    // Non-200 so Unipile retries.
+    // Non-2xx so Unipile retries.
     return NextResponse.json({ error: "Could not record webhook." }, { status: 500 });
   }
 }

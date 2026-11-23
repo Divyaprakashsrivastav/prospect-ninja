@@ -17,8 +17,10 @@ export const env = {
   aiProvider: optional("AI_PROVIDER") ?? "auto",
   cronSecret: optional("CRON_SECRET"),
   unipileApiKey: optional("UNIPILE_API_KEY"),
-  /** Shared secret Unipile sends in the Unipile-Auth header on webhooks. */
+  /** Webhook endpoint secret from the Unipile dashboard; verifies unipile-signature. */
   unipileWebhookSecret: optional("UNIPILE_WEBHOOK_SECRET"),
+  /** Set UNIPILE_WEBHOOK_VERIFY="false" to accept webhooks without checking the signature. */
+  unipileWebhookVerify: optional("UNIPILE_WEBHOOK_VERIFY")?.toLowerCase() !== "false",
   heyreachApiKey: optional("HEYREACH_API_KEY"),
   heyreachApiBaseUrl: optional("HEYREACH_API_BASE_URL"),
   rocketreachApiKey: optional("ROCKETREACH_API_KEY"),
