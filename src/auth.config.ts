@@ -8,6 +8,7 @@ const protectedPagePrefixes = [
   "/targeting",
   "/prospects",
   "/studio",
+  "/inbox",
   "/leads",
   "/outreach",
   "/approval",

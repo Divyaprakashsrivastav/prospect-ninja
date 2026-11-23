@@ -23,6 +23,7 @@ model User {
   leadOutreaches     LeadOutreach[]
   leadOutreachEvents LeadOutreachEvent[]
   auditEvents        MessageAuditEvent[]
+  leadReplyStatuses  LeadReplyStatus[]
 }
 
 model Campaign {
@@ -257,4 +258,25 @@ model WebhookEvent {
   @@index([externalAccountId])
   @@index([userId])
   @@index([prospectId])
+}
+
+enum LeadReplyStatusValue {
+  interested
+  not_now
+  meeting_booked
+}
+
+/// Inbox reply status per LinkedIn member (shared by all their replies), per user.
+model LeadReplyStatus {
+  id                 String      @id @default(cuid())
+  userId             String
+  user               User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// LinkedIn provider id of the other member (Unipile sender.id / Prospect.linkedinProviderId).
+  linkedinProviderId String
+  status             LeadReplyStatusValue
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+
+  @@unique([userId, linkedinProviderId])
+  @@index([userId, status])
 }

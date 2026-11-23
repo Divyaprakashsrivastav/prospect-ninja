@@ -16,6 +16,8 @@ export const config = {
     "/prospects/:path*",
     "/studio",
     "/studio/:path*",
+    "/inbox",
+    "/inbox/:path*",
     "/leads",
     "/leads/:path*",
     "/outreach",

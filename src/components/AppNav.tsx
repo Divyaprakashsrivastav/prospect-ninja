@@ -25,6 +25,7 @@ const primaryLinks = [
   { href: "/dashboard", label: "Dashboard", Icon: IconLayoutDashboard },
   { href: "/targeting", label: "Campaigns", Icon: IconMegaphone },
   { href: "/prospects", label: "Prospects", Icon: IconUsers },
+  { href: "/inbox", label: "Inbox", Icon: IconMessage },
   { href: "/leads", label: "Leads", Icon: IconInbox },
   { href: "/outreach", label: "Outreach", Icon: IconMessage },
   { href: "/studio", label: "AI Message Studio", Icon: IconSparkles },
