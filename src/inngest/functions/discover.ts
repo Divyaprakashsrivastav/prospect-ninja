@@ -17,7 +17,7 @@ export const scheduleCampaignDiscovery = inngest.createFunction(
     const campaigns = await step.run("load-active-campaigns", () =>
       prisma.campaign.findMany({
         where: { isActive: true },
-        select: { id: true, userId: true },
+        select: { id: true },
       }),
     );
 
@@ -32,7 +32,7 @@ export const scheduleCampaignDiscovery = inngest.createFunction(
       "queue-campaign-discovery",
       campaigns.map((campaign) =>
         campaignDiscoverRequested.create(
-          { campaignId: campaign.id, userId: campaign.userId },
+          { campaignId: campaign.id },
           { id: `discover-${campaign.id}-${day}` },
         ),
       ),
@@ -52,11 +52,21 @@ export const discoverCampaign = inngest.createFunction(
     concurrency: { limit: 2 },
   },
   async ({ event, step }) => {
-    const { campaignId, userId } = event.data;
+    const { campaignId } = event.data;
 
     return step.run("discover", async () => {
+      // The owner is always the campaign's userId, so look it up rather
+      // than requiring callers to pass it.
+      const campaign = await prisma.campaign.findUnique({
+        where: { id: campaignId },
+        select: { userId: true },
+      });
+      if (!campaign) {
+        throw new NonRetriableError("Campaign not found.");
+      }
+
       try {
-        return await discoverForCampaign(userId, campaignId);
+        return await discoverForCampaign(campaign.userId, campaignId);
       } catch (error) {
         const message = error instanceof Error ? error.message : "";
         // Campaign deleted or paused since it was queued: retrying won't help.

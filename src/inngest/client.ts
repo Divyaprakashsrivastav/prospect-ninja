@@ -6,6 +6,6 @@ export const inngest = new Inngest({ id: "prospect-ninja" });
 export const campaignDiscoverRequested = eventType(
   "campaign/discover.requested",
   {
-    schema: staticSchema<{ campaignId: string; userId: string }>(),
+    schema: staticSchema<{ campaignId: string }>(),
   },
 );
